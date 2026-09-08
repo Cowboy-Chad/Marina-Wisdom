@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from backend.database import init_db
+from backend.routers import router
 
 
 @asynccontextmanager
@@ -25,7 +26,4 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-@app.get("/api/health")
-async def health():
-    return {"status": "ok"}
+app.include_router(router)

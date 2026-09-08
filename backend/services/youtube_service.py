@@ -20,5 +20,6 @@ async def fetch_transcript(url: str) -> str:
     if not video_id:
         raise ValueError(f"Could not extract video ID from URL: {url}")
 
-    transcript = YouTubeTranscriptApi.get_transcript(video_id)
-    return " ".join(entry["text"] for entry in transcript)
+    yt = YouTubeTranscriptApi()
+    fetched = yt.fetch(video_id)
+    return " ".join(s.text for s in fetched.snippets)
