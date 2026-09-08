@@ -44,3 +44,7 @@ export function getHistory(params = {}) {
 export function getPatterns() {
   return request('/patterns')
 }
+
+export function getModels() {
+  return request('/models')
+}

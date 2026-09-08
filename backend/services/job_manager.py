@@ -65,7 +65,7 @@ async def list_jobs(source: Optional[str] = None, pattern: Optional[str] = None,
         ]
 
 
-async def start_analysis(source: str, url: str | None, pattern: str, file_path: str | None = None) -> str:
+async def start_analysis(source: str, url: str | None, pattern: str, file_path: str | None = None, model: str | None = None) -> str:
     async with async_session() as session:
         job = AnalysisJob(
             source=source,
@@ -78,12 +78,12 @@ async def start_analysis(source: str, url: str | None, pattern: str, file_path: 
         await session.commit()
         job_id = job.id
 
-    task = asyncio.create_task(_run_analysis(job_id, source, url, pattern, file_path))
+    task = asyncio.create_task(_run_analysis(job_id, source, url, pattern, file_path, model))
     _jobs[job_id] = task
     return job_id
 
 
-async def _run_analysis(job_id: str, source: str, url: str | None, pattern: str, file_path: str | None):
+async def _run_analysis(job_id: str, source: str, url: str | None, pattern: str, file_path: str | None, model: str | None):
     t0 = time.time()
     meta = {}
 
@@ -118,7 +118,7 @@ async def _run_analysis(job_id: str, source: str, url: str | None, pattern: str,
         else:
             meta["transcript_source"] = "cache (from history)"
 
-        result = await run_fabric(pattern, transcript)
+        result = await run_fabric(pattern, transcript, model=model)
 
         processing_time = round(time.time() - t0, 1)
         meta.update({

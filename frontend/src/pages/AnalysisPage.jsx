@@ -1,11 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { MonitorPlay, Video, Upload, Globe } from 'lucide-react'
 import YouTubeTab from '../components/YouTubeTab'
 import RumbleTab from '../components/RumbleTab'
 import FileUploadTab from '../components/FileUploadTab'
 import WebScrapeTab from '../components/WebScrapeTab'
 import AnalysisRunner from '../components/AnalysisRunner'
-import { startAnalysis, startFileAnalysis } from '../api/client'
+import { startAnalysis, startFileAnalysis, getModels } from '../api/client'
 
 const TABS = [
   { key: 'youtube', label: 'YouTube', icon: MonitorPlay },
@@ -19,16 +19,30 @@ export default function AnalysisPage() {
   const [jobId, setJobId] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [model, setModel] = useState('')
+  const [models, setModels] = useState([])
+
+  useEffect(() => {
+    getModels().then((data) => {
+      setModels(data.models || [])
+      if (data.default) setModel(data.default)
+    }).catch(() => {})
+  }, [])
 
   const handleAnalyze = async ({ source, url, pattern, formData }) => {
     setSubmitting(true)
     setError('')
     setJobId('')
     try {
-      const data = formData
-        ? await startFileAnalysis(formData)
-        : await startAnalysis({ source, url, pattern })
-      setJobId(data.job_id)
+      const payload = { source, pattern, model: model || undefined }
+      if (formData) {
+        if (model) formData.set('model', model)
+        const data = await startFileAnalysis(formData)
+        setJobId(data.job_id)
+      } else {
+        const data = await startAnalysis({ ...payload, url })
+        setJobId(data.job_id)
+      }
     } catch (e) {
       setError(e.message)
     } finally {
@@ -53,6 +67,19 @@ export default function AnalysisPage() {
             <Icon size={16} /> {label}
           </button>
         ))}
+      </div>
+
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-300 mb-1">Model</label>
+        <select
+          value={model}
+          onChange={(e) => setModel(e.target.value)}
+          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-violet-500"
+        >
+          {models.map((m) => (
+            <option key={m} value={m}>{m}</option>
+          ))}
+        </select>
       </div>
 
       <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-6">

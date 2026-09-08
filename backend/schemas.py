@@ -7,6 +7,7 @@ class AnalysisRequest(BaseModel):
     source: str  # youtube | rumble | file | web
     url: Optional[str] = None
     pattern: str
+    model: Optional[str] = None
 
 
 class JobStatusResponse(BaseModel):

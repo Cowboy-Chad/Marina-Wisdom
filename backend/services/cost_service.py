@@ -13,14 +13,7 @@ if os.path.exists(_env_path):
                 OPENROUTER_API_KEY = line.split("=", 1)[1].strip("\"'")
 
 # Default model from fabric config
-FABRIC_MODEL = "z-ai/glm-5.3"
-_fabric_env = os.path.expanduser("~/.config/fabric/.env")
-if os.path.exists(_fabric_env):
-    with open(_fabric_env) as f:
-        for line in f:
-            line = line.strip()
-            if line.startswith("DEFAULT_MODEL="):
-                FABRIC_MODEL = line.split("=", 1)[1].strip("\"'")
+FABRIC_MODEL = os.environ.get("FABRIC_MODEL", "deepseek/deepseek-v4-flash")
 
 _pricing_cache: dict[str, dict] = {}
 _pricing_cache_timestamp: float = 0
