@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+sqlalchemy
+aiosqlite
+pydantic
+httpx
+tiktoken
+youtube-transcript-api
+python-multipart
