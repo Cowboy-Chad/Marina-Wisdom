@@ -1,0 +1,24 @@
+from youtube_transcript_api import YouTubeTranscriptApi
+
+
+def _extract_video_id(url: str) -> str | None:
+    import re
+    patterns = [
+        r"(?:v=|/v/|youtu\.be/)([a-zA-Z0-9_-]{11})",
+        r"(?:embed/)([a-zA-Z0-9_-]{11})",
+        r"(?:shorts/)([a-zA-Z0-9_-]{11})",
+    ]
+    for p in patterns:
+        m = re.search(p, url)
+        if m:
+            return m.group(1)
+    return None
+
+
+async def fetch_transcript(url: str) -> str:
+    video_id = _extract_video_id(url)
+    if not video_id:
+        raise ValueError(f"Could not extract video ID from URL: {url}")
+
+    transcript = YouTubeTranscriptApi.get_transcript(video_id)
+    return " ".join(entry["text"] for entry in transcript)
