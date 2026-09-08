@@ -4,18 +4,20 @@ import subprocess
 
 
 async def fetch_video_metadata(url: str) -> dict:
-    proc = await asyncio.create_subprocess_exec(
-        "yt-dlp",
-        "--dump-json",
-        url,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
-    stdout, stderr = await proc.communicate()
-    if proc.returncode != 0:
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "yt-dlp",
+            "--dump-json",
+            url,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+        )
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=10)
+        if proc.returncode != 0:
+            return {}
+        data = json.loads(stdout.decode().strip())
+    except (asyncio.TimeoutError, Exception):
         return {}
-
-    data = json.loads(stdout.decode().strip())
 
     metadata = {
         "title": data.get("title"),

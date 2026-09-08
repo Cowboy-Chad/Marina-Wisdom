@@ -11,7 +11,7 @@ from backend.services.rumble_service import download_and_transcribe
 from backend.services.file_service import transcribe_file
 from backend.services.web_scraper import scrape_text
 from backend.services.metadata_service import fetch_video_metadata
-from backend.services.cost_service import estimate_cost, FABRIC_MODEL
+from backend.services.cost_service import estimate_cost
 
 _jobs: dict[str, asyncio.Task] = {}
 
@@ -94,7 +94,10 @@ async def _run_analysis(job_id: str, source: str, url: str | None, pattern: str,
 
     try:
         if source in ("youtube", "rumble") and url:
-            meta = await fetch_video_metadata(url)
+            try:
+                meta = await asyncio.wait_for(fetch_video_metadata(url), timeout=10)
+            except (asyncio.TimeoutError, Exception):
+                meta = {}
 
         if source == "youtube":
             transcript = await fetch_transcript(url)
@@ -110,12 +113,9 @@ async def _run_analysis(job_id: str, source: str, url: str | None, pattern: str,
         result = await run_fabric(pattern, transcript)
 
         processing_time = round(time.time() - t0, 1)
-        cost_info = await estimate_cost(transcript, result, FABRIC_MODEL)
-
         meta.update({
             "fabric_pattern": pattern,
             "processing_time_seconds": processing_time,
-            **cost_info,
         })
 
         async with async_session() as session:
@@ -125,6 +125,9 @@ async def _run_analysis(job_id: str, source: str, url: str | None, pattern: str,
             job.metadata_json = meta
             job.status = "completed"
             await session.commit()
+
+        asyncio.create_task(_enrich_metadata(job_id, transcript, result, pattern))
+
     except Exception as e:
         processing_time = round(time.time() - t0, 1)
         meta.update({"fabric_pattern": pattern, "processing_time_seconds": processing_time})
@@ -136,3 +139,15 @@ async def _run_analysis(job_id: str, source: str, url: str | None, pattern: str,
             await session.commit()
     finally:
         _jobs.pop(job_id, None)
+
+
+async def _enrich_metadata(job_id: str, transcript: str, result: str, pattern: str):
+    try:
+        cost_info = await estimate_cost(transcript, result)
+        async with async_session() as session:
+            job = await session.get(AnalysisJob, job_id)
+            if job and job.metadata_json:
+                job.metadata_json.update(cost_info)
+                await session.commit()
+    except Exception:
+        pass

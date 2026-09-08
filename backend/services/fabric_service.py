@@ -1,6 +1,4 @@
 import asyncio
-import json
-import os
 import subprocess
 
 
@@ -12,7 +10,11 @@ async def run_fabric(pattern: str, input_text: str) -> str:
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    stdout, stderr = await proc.communicate(input=input_text.encode())
+    try:
+        stdout, stderr = await asyncio.wait_for(proc.communicate(input=input_text.encode()), timeout=300)
+    except asyncio.TimeoutError:
+        proc.kill()
+        raise RuntimeError(f"fabric analysis timed out after 300s for pattern '{pattern}'")
     if proc.returncode != 0:
         raise RuntimeError(f"fabric exited code {proc.returncode}: {stderr.decode()}")
     return stdout.decode().strip()
