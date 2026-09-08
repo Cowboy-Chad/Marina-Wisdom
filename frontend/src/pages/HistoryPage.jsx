@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getHistory } from '../api/client'
 import { Clock, MonitorPlay, Video, Globe, Upload, Copy, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react'
+import MetadataDisplay from '../components/MetadataDisplay'
 
 const SOURCE_ICONS = {
   youtube: MonitorPlay,
@@ -89,6 +90,7 @@ export default function HistoryPage() {
 
               {expanded && (
                 <div className="px-4 pb-4 border-t border-gray-800 pt-3 space-y-3">
+                  {job.metadata_json && <MetadataDisplay meta={job.metadata_json} />}
                   {job.result && (
                     <div>
                       <div className="text-xs font-medium text-gray-400 mb-1">Result</div>

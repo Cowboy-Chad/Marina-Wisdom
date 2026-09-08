@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { pollJob } from '../api/client'
 import { Loader2 } from 'lucide-react'
+import MetadataDisplay from './MetadataDisplay'
 
 export default function AnalysisRunner({ jobId }) {
   const [job, setJob] = useState(null)
@@ -50,6 +51,8 @@ export default function AnalysisRunner({ jobId }) {
           <Loader2 className="animate-spin text-blue-400" size={16} />
         )}
       </div>
+      {job?.metadata_json && <MetadataDisplay meta={job.metadata_json} />}
+
       {job?.status === 'completed' && job?.result && (
         <ResultDisplay result={job.result} transcript={job.transcript} />
       )}

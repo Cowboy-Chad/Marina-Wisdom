@@ -1,4 +1,5 @@
 import asyncio
+import time
 from typing import Optional
 
 from backend.models import AnalysisJob
@@ -9,6 +10,8 @@ from backend.services.youtube_service import fetch_transcript
 from backend.services.rumble_service import download_and_transcribe
 from backend.services.file_service import transcribe_file
 from backend.services.web_scraper import scrape_text
+from backend.services.metadata_service import fetch_video_metadata
+from backend.services.cost_service import estimate_cost, FABRIC_MODEL
 
 _jobs: dict[str, asyncio.Task] = {}
 
@@ -81,12 +84,18 @@ async def start_analysis(source: str, url: str | None, pattern: str, file_path: 
 
 
 async def _run_analysis(job_id: str, source: str, url: str | None, pattern: str, file_path: str | None):
+    t0 = time.time()
+    meta = {}
+
     async with async_session() as session:
         job = await session.get(AnalysisJob, job_id)
         job.status = "running"
         await session.commit()
 
     try:
+        if source in ("youtube", "rumble") and url:
+            meta = await fetch_video_metadata(url)
+
         if source == "youtube":
             transcript = await fetch_transcript(url)
         elif source == "rumble":
@@ -100,17 +109,30 @@ async def _run_analysis(job_id: str, source: str, url: str | None, pattern: str,
 
         result = await run_fabric(pattern, transcript)
 
+        processing_time = round(time.time() - t0, 1)
+        cost_info = await estimate_cost(transcript, result, FABRIC_MODEL)
+
+        meta.update({
+            "fabric_pattern": pattern,
+            "processing_time_seconds": processing_time,
+            **cost_info,
+        })
+
         async with async_session() as session:
             job = await session.get(AnalysisJob, job_id)
             job.transcript = transcript
             job.result = result
+            job.metadata_json = meta
             job.status = "completed"
             await session.commit()
     except Exception as e:
+        processing_time = round(time.time() - t0, 1)
+        meta.update({"fabric_pattern": pattern, "processing_time_seconds": processing_time})
         async with async_session() as session:
             job = await session.get(AnalysisJob, job_id)
             job.status = "failed"
             job.error = str(e)
+            job.metadata_json = meta
             await session.commit()
     finally:
         _jobs.pop(job_id, None)
