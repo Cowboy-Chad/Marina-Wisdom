@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { getHistory } from '../api/client'
-import { Clock, MonitorPlay, Video, Globe, Upload, Copy, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react'
+import { Clock, MonitorPlay, Video, Globe, Upload, Copy, ExternalLink, ChevronDown, ChevronUp, X } from 'lucide-react'
 import MetadataDisplay from '../components/MetadataDisplay'
 
 const SOURCE_ICONS = {
@@ -22,6 +22,7 @@ export default function HistoryPage() {
   const [source, setSource] = useState('')
   const [loading, setLoading] = useState(true)
   const [expandedId, setExpandedId] = useState(null)
+  const [showMetaId, setShowMetaId] = useState(null)
 
   useEffect(() => {
     setLoading(true)
@@ -85,12 +86,21 @@ export default function HistoryPage() {
                     Pattern: {job.pattern} · {new Date(job.created_at).toLocaleString()}
                   </div>
                 </div>
-                {expanded ? <ChevronUp size={18} className="text-gray-500" /> : <ChevronDown size={18} className="text-gray-500" />}
+                <div className="flex items-center gap-1">
+                  {job.metadata_json && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setShowMetaId(job.id) }}
+                      className="px-2 py-1 text-xs font-medium bg-violet-600/80 hover:bg-violet-600 text-white rounded transition"
+                    >
+                      Show Meta
+                    </button>
+                  )}
+                  {expanded ? <ChevronUp size={18} className="text-gray-500" /> : <ChevronDown size={18} className="text-gray-500" />}
+                </div>
               </div>
 
               {expanded && (
                 <div className="px-4 pb-4 border-t border-gray-800 pt-3 space-y-3">
-                  {job.metadata_json && <MetadataDisplay meta={job.metadata_json} />}
                   {job.result && (
                     <div>
                       <div className="text-xs font-medium text-gray-400 mb-1">Result</div>
@@ -129,6 +139,29 @@ export default function HistoryPage() {
           )
         })}
       </div>
+
+      {showMetaId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          onClick={() => setShowMetaId(null)}
+        >
+          <div
+            className="bg-gray-800 border border-gray-600 rounded-xl p-6 max-w-lg w-full mx-4 max-h-[80vh] overflow-y-auto shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-gray-200">Analysis Metadata</h2>
+              <button
+                onClick={() => setShowMetaId(null)}
+                className="p-1 hover:bg-gray-700 rounded transition"
+              >
+                <X size={18} className="text-gray-400" />
+              </button>
+            </div>
+            <MetadataDisplay meta={jobs.find((j) => j.id === showMetaId)?.metadata_json} />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
