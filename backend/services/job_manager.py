@@ -99,16 +99,24 @@ async def _run_analysis(job_id: str, source: str, url: str | None, pattern: str,
             except (asyncio.TimeoutError, Exception):
                 meta = {}
 
-        if source == "youtube":
-            transcript = await fetch_transcript(url)
-        elif source == "rumble":
-            transcript = await download_and_transcribe(url)
-        elif source == "file":
-            transcript = await transcribe_file(file_path)
-        elif source == "web":
-            transcript = await scrape_text(url)
+        if source in ("youtube", "rumble") and url:
+            transcript = await _find_existing_transcript(source, url)
         else:
-            raise ValueError(f"Unknown source: {source}")
+            transcript = None
+
+        if transcript is None:
+            if source == "youtube":
+                transcript = await fetch_transcript(url)
+            elif source == "rumble":
+                transcript = await download_and_transcribe(url)
+            elif source == "file":
+                transcript = await transcribe_file(file_path)
+            elif source == "web":
+                transcript = await scrape_text(url)
+            else:
+                raise ValueError(f"Unknown source: {source}")
+        else:
+            meta["transcript_source"] = "cache (from history)"
 
         result = await run_fabric(pattern, transcript)
 
@@ -139,6 +147,27 @@ async def _run_analysis(job_id: str, source: str, url: str | None, pattern: str,
             await session.commit()
     finally:
         _jobs.pop(job_id, None)
+
+
+async def _find_existing_transcript(source: str, url: str) -> str | None:
+    if not url:
+        return None
+    from sqlalchemy import select
+    async with async_session() as session:
+        stmt = (
+            select(AnalysisJob)
+            .where(AnalysisJob.source == source)
+            .where(AnalysisJob.url == url)
+            .where(AnalysisJob.transcript.isnot(None))
+            .where(AnalysisJob.status.in_(["completed"]))
+            .order_by(AnalysisJob.created_at.desc())
+            .limit(1)
+        )
+        result = await session.execute(stmt)
+        existing = result.scalar_one_or_none()
+        if existing and existing.transcript:
+            return existing.transcript
+    return None
 
 
 async def _enrich_metadata(job_id: str, transcript: str, result: str, pattern: str):

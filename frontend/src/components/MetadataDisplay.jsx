@@ -24,6 +24,7 @@ export default function MetadataDisplay({ meta }) {
   if (meta.processing_time_seconds != null) {
     rows.push(['Processing Time', `${meta.processing_time_seconds}s`])
   }
+  if (meta.transcript_source) rows.push(['Transcript Source', meta.transcript_source])
   if (meta.input_tokens != null) {
     rows.push([
       'Tokens',
