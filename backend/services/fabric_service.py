@@ -1,8 +1,13 @@
 import asyncio
+import os
 import subprocess
+
+FABRIC_TIMEOUT = int(os.environ.get("FABRIC_TIMEOUT", "1800"))
 
 
 async def run_fabric(pattern: str, input_text: str) -> str:
+    input_tokens = len(input_text) // 4
+    timeout = FABRIC_TIMEOUT + (input_tokens // 20)
     proc = await asyncio.create_subprocess_exec(
         "fabric",
         "-p", pattern,
@@ -11,10 +16,10 @@ async def run_fabric(pattern: str, input_text: str) -> str:
         stderr=subprocess.PIPE,
     )
     try:
-        stdout, stderr = await asyncio.wait_for(proc.communicate(input=input_text.encode()), timeout=300)
+        stdout, stderr = await asyncio.wait_for(proc.communicate(input=input_text.encode()), timeout=timeout)
     except asyncio.TimeoutError:
         proc.kill()
-        raise RuntimeError(f"fabric analysis timed out after 300s for pattern '{pattern}'")
+        raise RuntimeError(f"fabric analysis timed out after {timeout}s for pattern '{pattern}'")
     if proc.returncode != 0:
         raise RuntimeError(f"fabric exited code {proc.returncode}: {stderr.decode()}")
     return stdout.decode().strip()
