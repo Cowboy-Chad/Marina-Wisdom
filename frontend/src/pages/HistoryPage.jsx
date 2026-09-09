@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { getHistory } from '../api/client'
-import { Clock, MonitorPlay, Video, Globe, Upload, Copy, ExternalLink, ChevronDown, ChevronUp, X } from 'lucide-react'
+import { Clock, MonitorPlay, Video, Globe, Upload, Copy, ExternalLink, ChevronDown, ChevronUp, Search, X } from 'lucide-react'
 import MetadataDisplay from '../components/MetadataDisplay'
 
 const SOURCE_ICONS = {
@@ -20,6 +20,7 @@ const SOURCE_COLORS = {
 export default function HistoryPage() {
   const [jobs, setJobs] = useState([])
   const [source, setSource] = useState('')
+  const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [expandedId, setExpandedId] = useState(null)
   const [showMetaId, setShowMetaId] = useState(null)
@@ -39,6 +40,32 @@ export default function HistoryPage() {
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
   }, [showMetaId])
+
+  const filteredJobs = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return jobs
+    return jobs.filter((job) => {
+      const m = job.metadata_json || {}
+      const haystack = [
+        job.url,
+        job.file_path,
+        job.pattern,
+        job.source,
+        job.status,
+        job.error,
+        job.result,
+        job.transcript,
+        m.title,
+        m.channel,
+        m.channel_url,
+        m.webpage_url,
+      ]
+        .filter(Boolean)
+        .join('\n')
+        .toLowerCase()
+      return haystack.includes(q)
+    })
+  }, [jobs, query])
 
   const handleCopy = (text, id) => {
     navigator.clipboard.writeText(text)
@@ -66,14 +93,32 @@ export default function HistoryPage() {
         ))}
       </div>
 
+      <div className="relative mb-6">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by URL, title, channel, pattern, result..."
+          className="w-full pl-9 pr-8 py-2 bg-gray-800 border border-gray-700 rounded-lg text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-violet-500 transition"
+        />
+        {query && (
+          <button onClick={() => setQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 hover:bg-gray-700 rounded transition">
+            <X size={14} className="text-gray-500" />
+          </button>
+        )}
+      </div>
+
       {loading && <div className="text-gray-400">Loading...</div>}
 
-      {!loading && jobs.length === 0 && (
-        <div className="text-gray-500 text-center py-12">No results yet. Run an analysis first.</div>
+      {!loading && filteredJobs.length === 0 && (
+        <div className="text-gray-500 text-center py-12">
+          {query ? 'No matches for your search.' : 'No results yet. Run an analysis first.'}
+        </div>
       )}
 
       <div className="space-y-3">
-        {jobs.map((job) => {
+        {filteredJobs.map((job) => {
           const Icon = SOURCE_ICONS[job.source] || Clock
           const color = SOURCE_COLORS[job.source] || 'text-gray-400'
           const expanded = expandedId === job.id
