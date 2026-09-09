@@ -6,6 +6,7 @@ export default function MetadataDisplay({ meta }) {
   const rows = []
 
   if (meta.title) rows.push(['Title', meta.title])
+  if (meta.webpage_url) rows.push(['Video URL', meta.webpage_url, meta.webpage_url])
   if (meta.channel) {
     const subs = meta.channel_subscribers
       ? ` (${meta.channel_subscribers.toLocaleString()} subscribers)`
@@ -32,7 +33,7 @@ export default function MetadataDisplay({ meta }) {
     ])
   }
   if (meta.estimated_cost != null) {
-    rows.push(['Estimated Cost', `$${meta.estimated_cost.toFixed(4)}`])
+    rows.push(['Pattern Cost', `$${meta.estimated_cost.toFixed(4)}`])
   }
   if (meta.pricing_source) rows.push(['Pricing Source', meta.pricing_source])
 

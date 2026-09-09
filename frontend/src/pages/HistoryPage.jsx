@@ -23,6 +23,7 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(true)
   const [expandedId, setExpandedId] = useState(null)
   const [showMetaId, setShowMetaId] = useState(null)
+  const [copiedResult, setCopiedResult] = useState(null)
 
   useEffect(() => {
     setLoading(true)
@@ -32,7 +33,18 @@ export default function HistoryPage() {
       .finally(() => setLoading(false))
   }, [source])
 
-  const handleCopy = (text) => navigator.clipboard.writeText(text)
+  useEffect(() => {
+    if (!showMetaId) return
+    const handler = (e) => { if (e.key === 'Escape') setShowMetaId(null) }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [showMetaId])
+
+  const handleCopy = (text, id) => {
+    navigator.clipboard.writeText(text)
+    setCopiedResult(id)
+    setTimeout(() => setCopiedResult(null), 5000)
+  }
 
   return (
     <div>
@@ -74,7 +86,13 @@ export default function HistoryPage() {
               >
                 <Icon className={color} size={20} />
                 <div className="flex-1 min-w-0">
+                  {job.metadata_json?.title && (
+                    <div className="text-sm font-medium truncate text-gray-200">
+                      <span className="text-gray-500">Title:</span> {job.metadata_json.title}
+                    </div>
+                  )}
                   <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium truncate text-gray-400">URL:</span>
                     <span className="text-sm font-medium truncate">{job.url || job.file_path || '—'}</span>
                     <span className={`text-xs px-1.5 py-0.5 rounded ${
                       job.status === 'completed' ? 'bg-green-900/50 text-green-300' :
@@ -83,7 +101,7 @@ export default function HistoryPage() {
                     }`}>{job.status}</span>
                   </div>
                   <div className="text-xs text-gray-500 mt-0.5">
-                    Pattern: {job.pattern} · {new Date(job.created_at).toLocaleString()}
+                    Source: {job.source || '—'} · Pattern: {job.pattern} · {new Date(job.created_at).toLocaleString()}
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
@@ -104,7 +122,23 @@ export default function HistoryPage() {
                   {job.result && (
                     <div>
                       <div className="text-xs font-medium text-gray-400 mb-1">Result</div>
-                      <div className="bg-gray-800/50 rounded p-3 text-sm whitespace-pre-wrap max-h-60 overflow-y-auto">{job.result}</div>
+                      <div className="bg-gray-800/50 rounded p-3 text-sm whitespace-pre-wrap max-h-60 overflow-y-auto">
+                        {job.metadata_json && (
+                          <div className="text-xs space-y-0.5 mb-2 pb-2 border-b border-gray-700">
+                            {job.metadata_json.title && <div><span className="text-gray-500">Title: </span>{job.metadata_json.title}</div>}
+                            {job.metadata_json.channel && <div><span className="text-gray-500">Channel: </span>{job.metadata_json.channel}</div>}
+                            {job.metadata_json.channel_url && <div><span className="text-gray-500">Channel URL: </span>{job.metadata_json.channel_url}</div>}
+                            {job.metadata_json.webpage_url && <div><span className="text-gray-500">Video URL: </span>{job.metadata_json.webpage_url}</div>}
+                            {job.metadata_json.upload_date_display && (
+                              <div><span className="text-gray-500">Published: </span>{job.metadata_json.upload_date_display}{job.metadata_json.upload_date_relative ? ` (${job.metadata_json.upload_date_relative})` : ''}</div>
+                            )}
+                            {job.metadata_json.duration_display && <div><span className="text-gray-500">Duration: </span>{job.metadata_json.duration_display}</div>}
+                            {job.metadata_json.view_count != null && <div><span className="text-gray-500">Views: </span>{job.metadata_json.view_count.toLocaleString()}</div>}
+                            {job.metadata_json.estimated_cost != null && <div><span className="text-gray-500">Pattern Cost: </span>${Number(job.metadata_json.estimated_cost).toFixed(4)}</div>}
+                          </div>
+                        )}
+                        {job.result}
+                      </div>
                     </div>
                   )}
                   {job.transcript && (
@@ -118,12 +152,12 @@ export default function HistoryPage() {
                   )}
                   <div className="flex gap-2">
                     {job.result && (
-                      <button onClick={() => handleCopy(job.result)} className="flex items-center gap-1 text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded">
+                      <button onClick={() => handleCopy(job.result, `result-${job.id}`)} className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${copiedResult === `result-${job.id}` ? 'bg-green-600 hover:bg-green-500' : 'bg-gray-700 hover:bg-gray-600'}`}>
                         <Copy size={12} /> Copy Result
                       </button>
                     )}
                     {job.transcript && (
-                      <button onClick={() => handleCopy(job.transcript)} className="flex items-center gap-1 text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded">
+                      <button onClick={() => handleCopy(job.transcript, `transcript-${job.id}`)} className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${copiedResult === `transcript-${job.id}` ? 'bg-green-600 hover:bg-green-500' : 'bg-gray-700 hover:bg-gray-600'}`}>
                         <Copy size={12} /> Copy Transcript
                       </button>
                     )}

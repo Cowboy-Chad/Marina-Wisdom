@@ -4,7 +4,7 @@ import subprocess
 
 DEFAULT_MODEL = os.environ.get("FABRIC_MODEL", "deepseek/deepseek-v4-flash")
 DEFAULT_VENDOR = os.environ.get("FABRIC_VENDOR", "OpenRouter")
-FABRIC_TIMEOUT = int(os.environ.get("FABRIC_TIMEOUT", "300"))
+FABRIC_TIMEOUT = int(os.environ.get("FABRIC_TIMEOUT", "600"))
 
 
 async def run_fabric(pattern: str, input_text: str, model: str | None = None, vendor: str | None = None) -> str:

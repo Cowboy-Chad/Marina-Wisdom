@@ -7,12 +7,13 @@ async def fetch_video_metadata(url: str) -> dict:
     try:
         proc = await asyncio.create_subprocess_exec(
             "yt-dlp",
+            "--impersonate", "Chrome-133",
             "--dump-json",
             url,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
         )
-        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=10)
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=15)
         if proc.returncode != 0:
             return {}
         data = json.loads(stdout.decode().strip())
@@ -28,6 +29,7 @@ async def fetch_video_metadata(url: str) -> dict:
         "upload_date": data.get("upload_date"),
         "duration_seconds": data.get("duration"),
         "webpage_url": data.get("webpage_url"),
+        "timestamp": data.get("timestamp"),
     }
 
     # Format human-readable duration
@@ -42,11 +44,15 @@ async def fetch_video_metadata(url: str) -> dict:
 
     # Format upload date
     upload_date = data.get("upload_date")
+    timestamp = data.get("timestamp")
     if upload_date and len(upload_date) == 8:
         import datetime
         dt = datetime.datetime.strptime(upload_date, "%Y%m%d")
         metadata["upload_date_display"] = dt.strftime("%Y-%m-%d")
-        metadata["upload_date_relative"] = _relative_time(dt)
+        if timestamp:
+            metadata["upload_date_relative"] = _relative_time(datetime.datetime.fromtimestamp(timestamp))
+        else:
+            metadata["upload_date_relative"] = _relative_time(dt)
 
     return metadata
 

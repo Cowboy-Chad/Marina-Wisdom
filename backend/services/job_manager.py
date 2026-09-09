@@ -1,4 +1,5 @@
 import asyncio
+import re
 import time
 from typing import Optional
 
@@ -93,6 +94,11 @@ async def _run_analysis(job_id: str, source: str, url: str | None, pattern: str,
         await session.commit()
 
     try:
+        if source == "youtube" and url and not re.search(r'(youtube\.com|youtu\.be)', url):
+            raise ValueError(f"URL does not appear to be a YouTube URL: {url}")
+        if source == "rumble" and url and not re.search(r'rumble\.com', url):
+            raise ValueError(f"URL does not appear to be a Rumble URL: {url}")
+
         if source in ("youtube", "rumble") and url:
             try:
                 meta = await asyncio.wait_for(fetch_video_metadata(url), timeout=10)
@@ -108,7 +114,8 @@ async def _run_analysis(job_id: str, source: str, url: str | None, pattern: str,
             if source == "youtube":
                 transcript = await fetch_transcript(url)
             elif source == "rumble":
-                transcript = await download_and_transcribe(url)
+                transcript, transcript_cost = await download_and_transcribe(url)
+                meta["original_transcript_cost"] = round(transcript_cost, 6)
             elif source == "file":
                 transcript = await transcribe_file(file_path)
             elif source == "web":
@@ -121,9 +128,14 @@ async def _run_analysis(job_id: str, source: str, url: str | None, pattern: str,
         result = await run_fabric(pattern, transcript, model=model)
 
         processing_time = round(time.time() - t0, 1)
+        try:
+            cost_info = await estimate_cost(transcript, result)
+        except Exception:
+            cost_info = {}
         meta.update({
             "fabric_pattern": pattern,
             "processing_time_seconds": processing_time,
+            **cost_info,
         })
 
         async with async_session() as session:
@@ -133,8 +145,6 @@ async def _run_analysis(job_id: str, source: str, url: str | None, pattern: str,
             job.metadata_json = meta
             job.status = "completed"
             await session.commit()
-
-        asyncio.create_task(_enrich_metadata(job_id, transcript, result, pattern))
 
     except Exception as e:
         processing_time = round(time.time() - t0, 1)
@@ -170,13 +180,38 @@ async def _find_existing_transcript(source: str, url: str) -> str | None:
     return None
 
 
-async def _enrich_metadata(job_id: str, transcript: str, result: str, pattern: str):
+async def _add_cost_async(job_id: str, transcript: str, result: str):
+    """Fallback: enrich existing completed jobs that still lack estimated_cost."""
     try:
-        cost_info = await estimate_cost(transcript, result)
+        meta = await estimate_cost(transcript, result)
         async with async_session() as session:
             job = await session.get(AnalysisJob, job_id)
-            if job and job.metadata_json:
-                job.metadata_json.update(cost_info)
+            if job and job.metadata_json and "estimated_cost" not in job.metadata_json:
+                job.metadata_json.update(meta)
                 await session.commit()
     except Exception:
         pass
+
+
+async def backfill_estimated_costs() -> int:
+    """Add estimated_cost to any completed job that lacks it. Returns count updated."""
+    from sqlalchemy import select
+    count = 0
+    async with async_session() as session:
+        stmt = (
+            select(AnalysisJob)
+            .where(AnalysisJob.status == "completed")
+            .where(AnalysisJob.result.isnot(None))
+        )
+        result = await session.execute(stmt)
+        jobs = result.scalars().all()
+        for job in jobs:
+            if job.metadata_json and "estimated_cost" not in job.metadata_json and job.result:
+                try:
+                    cost_info = await estimate_cost(job.transcript or "", job.result)
+                except Exception:
+                    continue
+                job.metadata_json.update(cost_info)
+                count += 1
+        await session.commit()
+    return count

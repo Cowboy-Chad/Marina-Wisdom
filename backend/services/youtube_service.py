@@ -18,7 +18,7 @@ def _extract_video_id(url: str) -> str | None:
 async def fetch_transcript(url: str) -> str:
     video_id = _extract_video_id(url)
     if not video_id:
-        raise ValueError(f"Could not extract video ID from URL: {url}")
+        raise ValueError(f"Could not extract YouTube video ID from URL: {url} (does not look like a valid YouTube URL)")
 
     yt = YouTubeTranscriptApi()
     fetched = yt.fetch(video_id)
