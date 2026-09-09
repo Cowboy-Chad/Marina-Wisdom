@@ -1,10 +1,10 @@
-import { useState } from 'react'
 import { Globe } from 'lucide-react'
 import PatternSelector from './PatternSelector'
+import usePersistedState from '../hooks/usePersistedState'
 
 export default function WebScrapeTab({ onAnalyze }) {
-  const [url, setUrl] = useState('')
-  const [pattern, setPattern] = useState('analyze_claims')
+  const [url, setUrl] = usePersistedState('tab-web-url', '')
+  const [pattern, setPattern] = usePersistedState('tab-web-pattern', 'analyze_claims')
 
   return (
     <div className="space-y-4">

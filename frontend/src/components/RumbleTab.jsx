@@ -1,10 +1,10 @@
-import { useState } from 'react'
 import { Video } from 'lucide-react'
 import PatternSelector from './PatternSelector'
+import usePersistedState from '../hooks/usePersistedState'
 
 export default function RumbleTab({ onAnalyze }) {
-  const [url, setUrl] = useState('')
-  const [pattern, setPattern] = useState('create_micro_summary')
+  const [url, setUrl] = usePersistedState('tab-rumble-url', '')
+  const [pattern, setPattern] = usePersistedState('tab-rumble-pattern', 'create_micro_summary')
 
   return (
     <div className="space-y-4">

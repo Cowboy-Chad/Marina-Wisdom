@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import usePersistedState from '../hooks/usePersistedState'
 import { MonitorPlay, Video, Upload, Globe } from 'lucide-react'
 import YouTubeTab from '../components/YouTubeTab'
 import RumbleTab from '../components/RumbleTab'
@@ -15,11 +16,11 @@ const TABS = [
 ]
 
 export default function AnalysisPage() {
-  const [activeTab, setActiveTab] = useState('youtube')
+  const [activeTab, setActiveTab] = usePersistedState('analysis-tab', 'youtube')
   const [jobId, setJobId] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [model, setModel] = useState('')
+  const [model, setModel] = usePersistedState('analysis-model', '')
   const [models, setModels] = useState([])
 
   useEffect(() => {
@@ -27,7 +28,7 @@ export default function AnalysisPage() {
       setModels(data.models || [])
       if (data.default) setModel(data.default)
     }).catch(() => {})
-  }, [])
+  }, [setModels, setModel])
 
   const handleAnalyze = async ({ source, url, pattern, formData }) => {
     setSubmitting(true)

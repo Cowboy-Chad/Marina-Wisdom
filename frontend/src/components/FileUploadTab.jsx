@@ -1,10 +1,11 @@
 import { useState, useRef } from 'react'
 import { Upload } from 'lucide-react'
 import PatternSelector from './PatternSelector'
+import usePersistedState from '../hooks/usePersistedState'
 
 export default function FileUploadTab({ onAnalyze }) {
   const [file, setFile] = useState(null)
-  const [pattern, setPattern] = useState('create_micro_summary')
+  const [pattern, setPattern] = usePersistedState('tab-file-pattern', 'create_micro_summary')
   const inputRef = useRef(null)
 
   const handleSubmit = () => {
