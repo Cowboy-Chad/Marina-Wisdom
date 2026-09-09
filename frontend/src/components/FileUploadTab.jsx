@@ -34,7 +34,7 @@ export default function FileUploadTab({ onAnalyze }) {
           onChange={(e) => setFile(e.target.files[0])}
         />
       </div>
-      <PatternSelector value={pattern} onChange={setPattern} />
+      <PatternSelector value={pattern} onChange={setPattern} storageKey="file" />
       <button
         onClick={handleSubmit}
         disabled={!file || !pattern}

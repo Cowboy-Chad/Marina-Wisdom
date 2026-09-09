@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { getPatterns } from '../api/client'
 import { Check } from 'lucide-react'
+import usePersistedState from '../hooks/usePersistedState'
 
-export default function PatternSelector({ value, onChange }) {
+export default function PatternSelector({ value, onChange, storageKey = 'shared' }) {
   const [patterns, setPatterns] = useState([])
-  const [search, setSearch] = useState('')
-  const [confirmed, setConfirmed] = useState('')
+  const [search, setSearch] = usePersistedState(`pattern-search-${storageKey}`, '')
+  const [confirmed, setConfirmed] = usePersistedState(`pattern-confirmed-${storageKey}`, '')
   const lastClickRef = useRef({ name: '', time: 0 })
 
   useEffect(() => {

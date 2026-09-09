@@ -18,7 +18,7 @@ export default function WebScrapeTab({ onAnalyze }) {
           className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-violet-500"
         />
       </div>
-      <PatternSelector value={pattern} onChange={setPattern} />
+      <PatternSelector value={pattern} onChange={setPattern} storageKey="web" />
       <button
         onClick={() => onAnalyze({ source: 'web', url, pattern })}
         disabled={!url || !pattern}
