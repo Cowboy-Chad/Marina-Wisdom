@@ -80,7 +80,6 @@ async def estimate_cost(input_text: str, output_text: str, model: str = FABRIC_M
     cost = (input_tokens * prompt_price) + (output_tokens * completion_price)
 
     return {
-        "model": model,
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
         "prompt_price_per_token": prompt_price,

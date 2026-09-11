@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { pollJob } from '../api/client'
 import { Loader2 } from 'lucide-react'
-import MetadataDisplay from './MetadataDisplay'
 
 export default function AnalysisRunner({ jobId }) {
   const [job, setJob] = useState(null)
@@ -51,8 +50,6 @@ export default function AnalysisRunner({ jobId }) {
           <Loader2 className="animate-spin text-blue-400" size={16} />
         )}
       </div>
-      {job?.metadata_json && <MetadataDisplay meta={job.metadata_json} />}
-
       {job?.status === 'completed' && job?.result && (
         <ResultDisplay result={job.result} transcript={job.transcript} meta={job.metadata_json} />
       )}
@@ -69,33 +66,24 @@ function ResultDisplay({ result, transcript, meta }) {
   const [expanded, setExpanded] = useState(false)
   const [copied, setCopied] = useState(false)
 
-  const buildHeader = () => {
-    if (!meta) return { text: '', rows: [] }
-    const m = meta
-    const rows = []
-    if (m.title) {
-      rows.push({ label: 'Title', value: m.title })
-      if (m.webpage_url) rows.push({ label: 'Title URL', value: m.webpage_url, href: m.webpage_url })
-    }
-    if (m.channel) {
-      const subs = m.channel_subscribers ? ` (${m.channel_subscribers.toLocaleString()} subscribers)` : ''
-      rows.push({ label: 'Channel', value: m.channel + subs })
-      if (m.channel_url) rows.push({ label: 'Channel URL', value: m.channel_url, href: m.channel_url })
-    }
-    if (m.view_count != null) rows.push({ label: 'Views', value: m.view_count.toLocaleString() })
-    if (m.duration_display) rows.push({ label: 'Video Length', value: m.duration_display })
-    if (m.upload_date_display) {
-      const rel = m.upload_date_relative ? ` (${m.upload_date_relative})` : ''
-      rows.push({ label: 'Published', value: `${m.upload_date_display}${rel}` })
-    }
-    if (m.fabric_pattern) rows.push({ label: 'Pattern', value: m.fabric_pattern })
-    if (m.estimated_cost != null) rows.push({ label: 'Pattern Cost', value: `$${Number(m.estimated_cost).toFixed(4)}` })
-    const text = rows.map(r => `${r.label}: ${r.value}`).join('\n')
-    return { text: text ? text + '\n\n' : '', rows }
-  }
+  const metaLines = (meta ? [
+    meta.title && `Title: ${meta.title}`,
+    meta.webpage_url && `Title URL: ${meta.webpage_url}`,
+    meta.channel && `Channel: ${meta.channel}`,
+    meta.channel_url && `Channel URL: ${meta.channel_url}`,
+    meta.view_count != null && `Views: ${meta.view_count.toLocaleString()}`,
+    meta.duration_display && `Video Length: ${meta.duration_display}`,
+    meta.upload_date_display && `Published: ${meta.upload_date_display}${meta.upload_date_relative ? ` (${meta.upload_date_relative})` : ''}`,
+    meta.fabric_pattern && `Fabric Pattern: ${meta.fabric_pattern}`,
+    meta.model && `Model: ${meta.model}`,
+    meta.processing_time_seconds != null && `Processing Time: ${meta.processing_time_seconds}s`,
+    meta.transcript_source && `Transcript Source: ${meta.transcript_source}`,
+    meta.input_tokens != null && `Tokens: ${meta.input_tokens} in / ${meta.output_tokens} out (via tiktoken)`,
+    meta.estimated_cost != null && `Pattern Cost: $${Number(meta.estimated_cost).toFixed(4)}`,
+    meta.pricing_source && `Pricing Source: ${meta.pricing_source}`,
+  ].filter(Boolean) : [])
 
-  const header = buildHeader()
-  const fullResult = header.text + result
+  const fullResult = metaLines.length > 0 ? metaLines.join('\n') + '\n\n' + result : result
 
   const handleCopy = () => {
     navigator.clipboard.writeText(fullResult)
@@ -123,21 +111,7 @@ function ResultDisplay({ result, transcript, meta }) {
   return (
     <div className="space-y-3">
       <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 whitespace-pre-wrap text-sm leading-relaxed">
-        {header.rows.length > 0 && (
-          <div className="mb-3 pb-3 border-b border-gray-700 text-xs space-y-0.5">
-            {header.rows.map((r, i) => (
-              <div key={i} className="flex gap-2">
-                <span className="w-24 shrink-0 text-gray-500">{r.label}</span>
-                {r.href ? (
-                  <a href={r.href} target="_blank" rel="noreferrer" className="text-blue-400 hover:text-blue-300 truncate">{r.value}</a>
-                ) : (
-                  <span>{r.value}</span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-        {result}
+        {fullResult}
       </div>
       <div className="flex gap-2">
         <button onClick={handleCopy} className={`px-3 py-1.5 rounded text-sm ${copied ? 'bg-green-600 hover:bg-green-500' : 'bg-gray-700 hover:bg-gray-600'}`}>

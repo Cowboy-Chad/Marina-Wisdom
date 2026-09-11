@@ -67,6 +67,11 @@ async def list_jobs(source: Optional[str] = None, pattern: Optional[str] = None,
 
 
 async def start_analysis(source: str, url: str | None, pattern: str, file_path: str | None = None, model: str | None = None) -> str:
+    print(f"[analyze] source={source} url={url} pattern={pattern} model={model!r}", flush=True)
+    existing_id = await _find_existing_result(source, url, pattern, model)
+    if existing_id:
+        return existing_id
+
     async with async_session() as session:
         job = AnalysisJob(
             source=source,
@@ -129,11 +134,12 @@ async def _run_analysis(job_id: str, source: str, url: str | None, pattern: str,
 
         processing_time = round(time.time() - t0, 1)
         try:
-            cost_info = await estimate_cost(transcript, result)
+            cost_info = await estimate_cost(transcript, result, model=model or None)
         except Exception:
             cost_info = {}
         meta.update({
             "fabric_pattern": pattern,
+            "model": model,
             "processing_time_seconds": processing_time,
             **cost_info,
         })
@@ -157,6 +163,33 @@ async def _run_analysis(job_id: str, source: str, url: str | None, pattern: str,
             await session.commit()
     finally:
         _jobs.pop(job_id, None)
+
+
+async def _find_existing_result(source: str, url: str | None, pattern: str, model: str | None) -> str | None:
+    if not url:
+        return None
+    from sqlalchemy import select, desc
+    from backend.services.fabric_service import DEFAULT_MODEL
+    requested = model or DEFAULT_MODEL
+    async with async_session() as session:
+        stmt = (
+            select(AnalysisJob)
+            .where(AnalysisJob.source == source)
+            .where(AnalysisJob.url == url)
+            .where(AnalysisJob.pattern == pattern)
+            .where(AnalysisJob.status == "completed")
+            .where(AnalysisJob.result.isnot(None))
+            .order_by(desc(AnalysisJob.created_at))
+        )
+        result = await session.execute(stmt)
+        jobs = result.scalars().all()
+        for job in jobs:
+            stored = (job.metadata_json or {}).get("model")
+            if stored == requested:
+                return job.id
+            if stored is None and requested == DEFAULT_MODEL:
+                return job.id
+    return None
 
 
 async def _find_existing_transcript(source: str, url: str) -> str | None:

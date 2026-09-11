@@ -18,7 +18,7 @@ export default function YouTubeTab({ onAnalyze }) {
           className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-violet-500"
         />
       </div>
-      <PatternSelector value={pattern} onChange={setPattern} storageKey="youtube" />
+      <PatternSelector value={pattern} onChange={setPattern} onEnter={() => onAnalyze({ source: 'youtube', url, pattern })} storageKey="youtube" />
       <button
         onClick={() => onAnalyze({ source: 'youtube', url, pattern })}
         disabled={!url || !pattern}

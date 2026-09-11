@@ -20,24 +20,25 @@ export default function AnalysisPage() {
   const [jobId, setJobId] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
-  const [model, setModel] = usePersistedState('analysis-model', '')
+  const [model, setModel] = usePersistedState('analysis-model-v2', '')
   const [models, setModels] = useState([])
 
   useEffect(() => {
     getModels().then((data) => {
       setModels(data.models || [])
-      if (data.default) setModel(data.default)
-    }).catch(() => {})
+      setModel((current) => current || data.default || '')
+    }).catch((e) => console.error('Failed to load models:', e))
   }, [setModels, setModel])
 
   const handleAnalyze = async ({ source, url, pattern, formData }) => {
     setSubmitting(true)
     setError('')
     setJobId('')
+    const effectiveModel = model || undefined
     try {
-      const payload = { source, pattern, model: model || undefined }
+      const payload = { source, pattern, model: effectiveModel }
       if (formData) {
-        if (model) formData.set('model', model)
+        if (effectiveModel) formData.set('model', effectiveModel)
         const data = await startFileAnalysis(formData)
         setJobId(data.job_id)
       } else {
@@ -81,6 +82,9 @@ export default function AnalysisPage() {
             <option key={m} value={m}>{m}</option>
           ))}
         </select>
+        <p className="mt-1 text-xs text-gray-500">
+          {model ? `Will analyze with: ${model}` : 'Using default model'}
+        </p>
       </div>
 
       <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-6">

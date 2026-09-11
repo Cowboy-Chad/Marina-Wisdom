@@ -168,21 +168,26 @@ export default function HistoryPage() {
                     <div>
                       <div className="text-xs font-medium text-gray-400 mb-1">Result</div>
                       <div className="bg-gray-800/50 rounded p-3 text-sm whitespace-pre-wrap max-h-60 overflow-y-auto">
-                        {job.metadata_json && (
-                          <div className="text-xs space-y-0.5 mb-2 pb-2 border-b border-gray-700">
-                            {job.metadata_json.title && <div><span className="text-gray-500">Title: </span>{job.metadata_json.title}</div>}
-                            {job.metadata_json.channel && <div><span className="text-gray-500">Channel: </span>{job.metadata_json.channel}</div>}
-                            {job.metadata_json.channel_url && <div><span className="text-gray-500">Channel URL: </span>{job.metadata_json.channel_url}</div>}
-                            {job.metadata_json.webpage_url && <div><span className="text-gray-500">Video URL: </span>{job.metadata_json.webpage_url}</div>}
-                            {job.metadata_json.upload_date_display && (
-                              <div><span className="text-gray-500">Published: </span>{job.metadata_json.upload_date_display}{job.metadata_json.upload_date_relative ? ` (${job.metadata_json.upload_date_relative})` : ''}</div>
-                            )}
-                            {job.metadata_json.duration_display && <div><span className="text-gray-500">Duration: </span>{job.metadata_json.duration_display}</div>}
-                            {job.metadata_json.view_count != null && <div><span className="text-gray-500">Views: </span>{job.metadata_json.view_count.toLocaleString()}</div>}
-                            {job.metadata_json.estimated_cost != null && <div><span className="text-gray-500">Pattern Cost: </span>${Number(job.metadata_json.estimated_cost).toFixed(4)}</div>}
-                          </div>
-                        )}
-                        {job.result}
+                        {(() => {
+                          const meta = job.metadata_json || {};
+                          const lines = [
+                            meta.title && `Title: ${meta.title}`,
+                            meta.webpage_url && `Title URL: ${meta.webpage_url}`,
+                            meta.channel && `Channel: ${meta.channel}`,
+                            meta.channel_url && `Channel URL: ${meta.channel_url}`,
+                            meta.view_count != null && `Views: ${meta.view_count.toLocaleString()}`,
+                            meta.duration_display && `Video Length: ${meta.duration_display}`,
+                            meta.upload_date_display && `Published: ${meta.upload_date_display}${meta.upload_date_relative ? ` (${meta.upload_date_relative})` : ''}`,
+                            meta.fabric_pattern && `Fabric Pattern: ${meta.fabric_pattern}`,
+                            meta.model && `Model: ${meta.model}`,
+                            meta.processing_time_seconds != null && `Processing Time: ${meta.processing_time_seconds}s`,
+                            meta.transcript_source && `Transcript Source: ${meta.transcript_source}`,
+                            meta.input_tokens != null && `Tokens: ${meta.input_tokens} in / ${meta.output_tokens} out (via tiktoken)`,
+                            meta.estimated_cost != null && `Pattern Cost: $${Number(meta.estimated_cost).toFixed(4)}`,
+                            meta.pricing_source && `Pricing Source: ${meta.pricing_source}`,
+                          ].filter(Boolean);
+                          return (lines.length > 0 ? lines.join('\n') + '\n\n' : '') + job.result;
+                        })()}
                       </div>
                     </div>
                   )}
@@ -197,7 +202,27 @@ export default function HistoryPage() {
                   )}
                   <div className="flex gap-2">
                     {job.result && (
-                      <button onClick={() => handleCopy(job.result, `result-${job.id}`)} className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${copiedResult === `result-${job.id}` ? 'bg-green-600 hover:bg-green-500' : 'bg-gray-700 hover:bg-gray-600'}`}>
+                      <button onClick={() => {
+                        const meta = job.metadata_json || {};
+                        const prefix = [
+                          meta.title && `Title: ${meta.title}`,
+                          meta.webpage_url && `Title URL: ${meta.webpage_url}`,
+                          meta.channel && `Channel: ${meta.channel}`,
+                          meta.channel_url && `Channel URL: ${meta.channel_url}`,
+                          meta.view_count != null && `Views: ${meta.view_count.toLocaleString()}`,
+                          meta.duration_display && `Video Length: ${meta.duration_display}`,
+                          meta.upload_date_display && `Published: ${meta.upload_date_display}${meta.upload_date_relative ? ` (${meta.upload_date_relative})` : ''}`,
+                          meta.fabric_pattern && `Fabric Pattern: ${meta.fabric_pattern}`,
+                          meta.model && `Model: ${meta.model}`,
+                          meta.processing_time_seconds != null && `Processing Time: ${meta.processing_time_seconds}s`,
+                          meta.transcript_source && `Transcript Source: ${meta.transcript_source}`,
+                          meta.input_tokens != null && `Tokens: ${meta.input_tokens} in / ${meta.output_tokens} out (via tiktoken)`,
+                          meta.estimated_cost != null && `Pattern Cost: $${Number(meta.estimated_cost).toFixed(4)}`,
+                          meta.pricing_source && `Pricing Source: ${meta.pricing_source}`,
+                        ].filter(Boolean).join('\n');
+                        const full = prefix ? prefix + '\n\n' + job.result : job.result;
+                        handleCopy(full, `result-${job.id}`);
+                      }} className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${copiedResult === `result-${job.id}` ? 'bg-green-600 hover:bg-green-500' : 'bg-gray-700 hover:bg-gray-600'}`}>
                         <Copy size={12} /> Copy Result
                       </button>
                     )}
