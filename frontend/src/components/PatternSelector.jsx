@@ -9,6 +9,8 @@ export default function PatternSelector({ value, onChange, storageKey = 'shared'
   const [confirmed, setConfirmed] = usePersistedState(`pattern-confirmed-${storageKey}`, '')
   const showDropdown = !confirmed
   const lastClickRef = useRef({ name: '', time: 0 })
+  const [highlightedIndex, setHighlightedIndex] = useState(-1)
+  const dropdownRef = useRef(null)
 
   useEffect(() => {
     setLoading(true)
@@ -20,6 +22,14 @@ export default function PatternSelector({ value, onChange, storageKey = 'shared'
       setLoading(false)
     })
   }, [])
+
+  useEffect(() => {
+    if (highlightedIndex < 0 || !dropdownRef.current) return
+    const items = dropdownRef.current.children
+    if (items[highlightedIndex]) {
+      items[highlightedIndex].scrollIntoView({ block: 'nearest' })
+    }
+  }, [highlightedIndex])
 
   const filtered = patterns.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase()),
@@ -53,12 +63,29 @@ export default function PatternSelector({ value, onChange, storageKey = 'shared'
           setConfirmed('')
         }}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' && filtered.length > 0) {
-            const name = filtered[0].name
-            onChange(name)
-            setSearch(name)
-            setConfirmed(name)
-            if (onEnter) onEnter()
+          if (e.key === 'ArrowDown') {
+            e.preventDefault()
+            setHighlightedIndex((prev) =>
+              prev < filtered.length - 1 ? prev + 1 : 0
+            )
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault()
+            setHighlightedIndex((prev) =>
+              prev > 0 ? prev - 1 : filtered.length - 1
+            )
+          } else if (e.key === 'Enter') {
+            if (confirmed) {
+              if (onEnter) onEnter()
+            } else if (filtered.length > 0) {
+              const idx = highlightedIndex >= 0 ? highlightedIndex : 0
+              const name = filtered[idx].name
+              onChange(name)
+              setSearch(name)
+              setConfirmed(name)
+              if (onEnter) onEnter()
+            }
+          } else {
+            setHighlightedIndex(-1)
           }
         }}
         className={`w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 mb-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 ${
@@ -66,19 +93,21 @@ export default function PatternSelector({ value, onChange, storageKey = 'shared'
         }`}
       />
       {showDropdown && (
-        <div className="w-full bg-gray-800 border border-gray-700 rounded-lg overflow-y-auto min-h-[120px] max-h-[200px]">
+        <div ref={dropdownRef} className="w-full bg-gray-800 border border-gray-700 rounded-lg overflow-y-auto min-h-[120px] max-h-[200px]">
           {loading ? (
             <div className="px-3 py-1.5 text-sm text-gray-500">Loading patterns...</div>
           ) : filtered.length === 0 ? (
             <div className="px-3 py-1.5 text-sm text-gray-500">No patterns match your search</div>
-          ) : filtered.map((p) => (
+          ) : filtered.map((p, idx) => (
             <div
               key={p.name}
               onClick={() => handleClick(p.name)}
               className={`px-3 py-1.5 text-sm cursor-pointer transition ${
                 p.name === value
                   ? 'bg-violet-600/30 text-violet-200'
-                  : 'text-gray-100 hover:bg-gray-700'
+                  : idx === highlightedIndex
+                    ? 'bg-gray-600 text-white'
+                    : 'text-gray-100 hover:bg-gray-700'
               }`}
             >
               {p.name}
