@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { getPatterns } from '../api/client'
 import usePersistedState from '../hooks/usePersistedState'
 
-export default function PatternSelector({ value, onChange, storageKey = 'shared', onEnter }) {
+export default function PatternSelector({ value, onChange, storageKey = 'shared', onEnter, onConfirm }) {
   const [patterns, setPatterns] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = usePersistedState(`pattern-search-${storageKey}`, '')
@@ -42,6 +42,7 @@ export default function PatternSelector({ value, onChange, storageKey = 'shared'
       setSearch(name)
       setConfirmed(name)
       lastClickRef.current = { name: '', time: 0 }
+      if (onConfirm) onConfirm(name)
       return
     }
     lastClickRef.current = { name, time: now }
@@ -82,7 +83,7 @@ export default function PatternSelector({ value, onChange, storageKey = 'shared'
               onChange(name)
               setSearch(name)
               setConfirmed(name)
-              if (onEnter) onEnter()
+              if (onConfirm) onConfirm(name)
             }
           } else {
             setHighlightedIndex(-1)

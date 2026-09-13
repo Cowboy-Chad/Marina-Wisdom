@@ -165,6 +165,49 @@ async def _run_analysis(job_id: str, source: str, url: str | None, pattern: str,
         _jobs.pop(job_id, None)
 
 
+async def find_existing_result(source: str, url: str | None, pattern: str, model: str | None) -> JobStatusResponse | None:
+    if not url:
+        return None
+    from sqlalchemy import select, desc
+    from backend.services.fabric_service import DEFAULT_MODEL
+    requested = model or DEFAULT_MODEL
+    async with async_session() as session:
+        stmt = (
+            select(AnalysisJob)
+            .where(AnalysisJob.source == source)
+            .where(AnalysisJob.url == url)
+            .where(AnalysisJob.pattern == pattern)
+            .where(AnalysisJob.status == "completed")
+            .where(AnalysisJob.result.isnot(None))
+            .order_by(desc(AnalysisJob.created_at))
+        )
+        result = await session.execute(stmt)
+        jobs = result.scalars().all()
+        for job in jobs:
+            stored = (job.metadata_json or {}).get("model")
+            if stored == requested:
+                return _job_to_response(job)
+            if stored is None and requested == DEFAULT_MODEL:
+                return _job_to_response(job)
+    return None
+
+
+def _job_to_response(job: AnalysisJob) -> JobStatusResponse:
+    return JobStatusResponse(
+        id=job.id,
+        source=job.source,
+        url=job.url,
+        pattern=job.pattern,
+        status=job.status,
+        transcript=job.transcript,
+        result=job.result,
+        error=job.error,
+        metadata_json=job.metadata_json,
+        created_at=job.created_at,
+        updated_at=job.updated_at,
+    )
+
+
 async def _find_existing_result(source: str, url: str | None, pattern: str, model: str | None) -> str | None:
     if not url:
         return None

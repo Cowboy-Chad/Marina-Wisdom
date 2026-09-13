@@ -2,7 +2,7 @@ import { Video } from 'lucide-react'
 import PatternSelector from './PatternSelector'
 import usePersistedState from '../hooks/usePersistedState'
 
-export default function RumbleTab({ onAnalyze }) {
+export default function RumbleTab({ onAnalyze, onConfirm }) {
   const [url, setUrl] = usePersistedState('tab-rumble-url', '')
   const [pattern, setPattern] = usePersistedState('tab-rumble-pattern', 'create_micro_summary')
 
@@ -18,7 +18,7 @@ export default function RumbleTab({ onAnalyze }) {
           className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-violet-500"
         />
       </div>
-      <PatternSelector value={pattern} onChange={setPattern} onEnter={() => onAnalyze({ source: 'rumble', url, pattern })} storageKey="rumble" />
+      <PatternSelector value={pattern} onChange={setPattern} onEnter={() => onAnalyze({ source: 'rumble', url, pattern })} onConfirm={(p) => onConfirm({ source: 'rumble', url, pattern: p })} storageKey="rumble" />
       <button
         onClick={() => onAnalyze({ source: 'rumble', url, pattern })}
         disabled={!url || !pattern}

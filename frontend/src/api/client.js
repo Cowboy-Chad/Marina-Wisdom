@@ -45,6 +45,12 @@ export function getPatterns() {
   return request('/patterns')
 }
 
+export function checkResult(source, url, pattern, model) {
+  const params = new URLSearchParams({ source, url, pattern })
+  if (model) params.set('model', model)
+  return request(`/check-result?${params.toString()}`)
+}
+
 export function getModels() {
   return request('/models')
 }

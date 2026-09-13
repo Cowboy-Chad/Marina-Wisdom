@@ -2,7 +2,7 @@ import { MonitorPlay } from 'lucide-react'
 import PatternSelector from './PatternSelector'
 import usePersistedState from '../hooks/usePersistedState'
 
-export default function YouTubeTab({ onAnalyze }) {
+export default function YouTubeTab({ onAnalyze, onConfirm }) {
   const [url, setUrl] = usePersistedState('tab-youtube-url', '')
   const [pattern, setPattern] = usePersistedState('tab-youtube-pattern', 'create_micro_summary')
 
@@ -18,7 +18,7 @@ export default function YouTubeTab({ onAnalyze }) {
           className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-gray-100 focus:outline-none focus:ring-2 focus:ring-violet-500"
         />
       </div>
-      <PatternSelector value={pattern} onChange={setPattern} onEnter={() => onAnalyze({ source: 'youtube', url, pattern })} storageKey="youtube" />
+      <PatternSelector value={pattern} onChange={setPattern} onEnter={() => onAnalyze({ source: 'youtube', url, pattern })} onConfirm={(p) => onConfirm({ source: 'youtube', url, pattern: p })} storageKey="youtube" />
       <button
         onClick={() => onAnalyze({ source: 'youtube', url, pattern })}
         disabled={!url || !pattern}

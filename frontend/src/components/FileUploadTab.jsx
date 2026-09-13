@@ -3,7 +3,7 @@ import { Upload } from 'lucide-react'
 import PatternSelector from './PatternSelector'
 import usePersistedState from '../hooks/usePersistedState'
 
-export default function FileUploadTab({ onAnalyze }) {
+export default function FileUploadTab({ onAnalyze, onConfirm }) {
   const [file, setFile] = useState(null)
   const [pattern, setPattern] = usePersistedState('tab-file-pattern', 'create_micro_summary')
   const inputRef = useRef(null)
@@ -34,7 +34,7 @@ export default function FileUploadTab({ onAnalyze }) {
           onChange={(e) => setFile(e.target.files[0])}
         />
       </div>
-      <PatternSelector value={pattern} onChange={setPattern} onEnter={handleSubmit} storageKey="file" />
+      <PatternSelector value={pattern} onChange={setPattern} onEnter={handleSubmit} onConfirm={(p) => onConfirm({ source: 'file', file: file?.name, pattern: p })} storageKey="file" />
       <button
         onClick={handleSubmit}
         disabled={!file || !pattern}

@@ -60,6 +60,14 @@ async def get_history(source: str | None = None, pattern: str | None = None, lim
     return await job_manager.list_jobs(source=source, pattern=pattern, limit=limit, offset=offset)
 
 
+@router.get("/check-result")
+async def check_result(source: str, url: str, pattern: str, model: str | None = None):
+    job = await job_manager.find_existing_result(source, url, pattern, model)
+    if job is None:
+        return {"found": False}
+    return {"found": True, "job": job}
+
+
 @router.get("/patterns", response_model=list[PatternInfo])
 async def get_patterns():
     return await list_patterns()

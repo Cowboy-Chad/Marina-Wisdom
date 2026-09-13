@@ -73,7 +73,7 @@ function ResultDisplay({ result, transcript, meta }) {
     meta.channel_url && `Channel URL: ${meta.channel_url}`,
     meta.view_count != null && `Views: ${meta.view_count.toLocaleString()}`,
     meta.duration_display && `Video Length: ${meta.duration_display}`,
-    meta.upload_date_display && `Published: ${meta.upload_date_display}${meta.upload_date_relative ? ` (${meta.upload_date_relative})` : ''}`,
+    meta.upload_date_display && `Published: ${meta.upload_date_display}`,
     meta.fabric_pattern && `Fabric Pattern: ${meta.fabric_pattern}`,
     meta.model && `Model: ${meta.model}`,
     meta.processing_time_seconds != null && `Processing Time: ${meta.processing_time_seconds}s`,

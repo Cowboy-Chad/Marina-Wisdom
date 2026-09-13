@@ -6,7 +6,7 @@ import RumbleTab from '../components/RumbleTab'
 import FileUploadTab from '../components/FileUploadTab'
 import WebScrapeTab from '../components/WebScrapeTab'
 import AnalysisRunner from '../components/AnalysisRunner'
-import { startAnalysis, startFileAnalysis, getModels } from '../api/client'
+import { startAnalysis, startFileAnalysis, getModels, checkResult } from '../api/client'
 
 const TABS = [
   { key: 'youtube', label: 'YouTube', icon: MonitorPlay },
@@ -22,6 +22,7 @@ export default function AnalysisPage() {
   const [error, setError] = useState('')
   const [model, setModel] = usePersistedState('analysis-model-v2', '')
   const [models, setModels] = useState([])
+  const [checkMessage, setCheckMessage] = useState('')
 
   useEffect(() => {
     getModels().then((data) => {
@@ -34,6 +35,7 @@ export default function AnalysisPage() {
     setSubmitting(true)
     setError('')
     setJobId('')
+    setCheckMessage('')
     const effectiveModel = model || undefined
     try {
       const payload = { source, pattern, model: effectiveModel }
@@ -49,6 +51,23 @@ export default function AnalysisPage() {
       setError(e.message)
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleAutoCheck = async ({ source, url, pattern }) => {
+    setError('')
+    setCheckMessage('')
+    setJobId('')
+    const effectiveModel = model || undefined
+    try {
+      const data = await checkResult(source, url, pattern, effectiveModel)
+      if (data.found) {
+        setJobId(data.job.id)
+      } else {
+        setCheckMessage('not_found')
+      }
+    } catch (e) {
+      setError(e.message)
     }
   }
 
@@ -88,10 +107,10 @@ export default function AnalysisPage() {
       </div>
 
       <div className="bg-gray-900/50 border border-gray-800 rounded-lg p-6">
-        {activeTab === 'youtube' && <YouTubeTab onAnalyze={handleAnalyze} />}
-        {activeTab === 'rumble' && <RumbleTab onAnalyze={handleAnalyze} />}
-        {activeTab === 'file' && <FileUploadTab onAnalyze={handleAnalyze} />}
-        {activeTab === 'web' && <WebScrapeTab onAnalyze={handleAnalyze} />}
+        {activeTab === 'youtube' && <YouTubeTab onAnalyze={handleAnalyze} onConfirm={handleAutoCheck} />}
+        {activeTab === 'rumble' && <RumbleTab onAnalyze={handleAnalyze} onConfirm={handleAutoCheck} />}
+        {activeTab === 'file' && <FileUploadTab onAnalyze={handleAnalyze} onConfirm={handleAutoCheck} />}
+        {activeTab === 'web' && <WebScrapeTab onAnalyze={handleAnalyze} onConfirm={handleAutoCheck} />}
 
         {error && (
           <div className="mt-4 p-3 bg-red-900/30 border border-red-700 rounded-lg text-red-300 text-sm">
@@ -102,6 +121,12 @@ export default function AnalysisPage() {
           <div className="mt-4 text-sm text-blue-400">Starting analysis...</div>
         )}
       </div>
+
+      {checkMessage === 'not_found' && (
+        <div className="mt-4 inline-block px-3 py-1.5 bg-red-900/50 border border-red-700 rounded text-xs text-red-300">
+          Analysis has not been done before.
+        </div>
+      )}
 
       <AnalysisRunner jobId={jobId} />
     </div>
