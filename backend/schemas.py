@@ -3,9 +3,20 @@ from typing import Optional
 from datetime import datetime
 
 
-class AnalysisRequest(BaseModel):
-    source: str  # youtube | rumble | file | web
-    url: Optional[str] = None
+class YouTubeRequest(BaseModel):
+    url: str = ""
+    pattern: str
+    model: Optional[str] = None
+
+
+class RumbleRequest(BaseModel):
+    url: str = ""
+    pattern: str
+    model: Optional[str] = None
+
+
+class WebRequest(BaseModel):
+    url: str = ""
     pattern: str
     model: Optional[str] = None
 

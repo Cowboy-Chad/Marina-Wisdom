@@ -12,15 +12,29 @@ async function request(path, options = {}) {
   return resp.json()
 }
 
-export function startAnalysis(data) {
-  return request('/analyze', {
+export function startYouTubeAnalysis(data) {
+  return request('/youtube/analyze', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export function startRumbleAnalysis(data) {
+  return request('/rumble/analyze', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export function startWebAnalysis(data) {
+  return request('/web/scrape', {
     method: 'POST',
     body: JSON.stringify(data),
   })
 }
 
 export function startFileAnalysis(formData) {
-  return fetch(`${API_BASE}/analyze/file`, {
+  return fetch(`${API_BASE}/file/analyze`, {
     method: 'POST',
     body: formData,
   }).then(async (resp) => {
@@ -45,10 +59,22 @@ export function getPatterns() {
   return request('/patterns')
 }
 
-export function checkResult(source, url, pattern, model) {
-  const params = new URLSearchParams({ source, url, pattern })
+export function checkYouTubeResult(url, pattern, model) {
+  const params = new URLSearchParams({ url, pattern })
   if (model) params.set('model', model)
-  return request(`/check-result?${params.toString()}`)
+  return request(`/youtube/check-result?${params.toString()}`)
+}
+
+export function checkRumbleResult(url, pattern, model) {
+  const params = new URLSearchParams({ url, pattern })
+  if (model) params.set('model', model)
+  return request(`/rumble/check-result?${params.toString()}`)
+}
+
+export function checkWebResult(url, pattern, model) {
+  const params = new URLSearchParams({ url, pattern })
+  if (model) params.set('model', model)
+  return request(`/web/check-result?${params.toString()}`)
 }
 
 export function getModels() {
