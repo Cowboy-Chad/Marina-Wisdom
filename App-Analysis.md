@@ -407,9 +407,12 @@ and `public/icons.svg` are all unreferenced (Vite template leftovers).
 ### Ports & launch
 - **One command:** `./backend/run.sh` → uvicorn on **127.0.0.1:5173**, serving the API and
   `frontend/dist`. Override with `HOST` / `PORT`.
-- `run.sh` `cd`s to the repo root, sources `.venv` **there**, then `cd`s back to `backend/`. It
-  warns if `frontend/dist/index.html` is missing.
-- **`.venv` lives at the repo root.** Create it there.
+- `run.sh` `cd`s to the repo root, sources `.venv` **there**, and **stays** there — `backend` is
+  a package, so the repo root must be the working directory for `backend.main` to be importable.
+  It warns if `frontend/dist/index.html` is missing and exits if `.venv` is absent.
+- `run.sh` invokes `python3 -m uvicorn`, not the `uvicorn` console script — see issue 20 below.
+- **`.venv` lives at the repo root.** Create it there, and do not move or rename the repo
+  afterwards without recreating it (issue 20).
 - **Frontend dev mode:** `npm run dev` → Vite on **5174** (strictPort), proxying `/api` to 5173.
 - `frontend/dist/` is gitignored, so a fresh clone **must run `npm run build`** before `run.sh`
   serves anything at `/`.
@@ -492,6 +495,26 @@ Items marked ✅ were fixed on 2026-09-28.
     `metadata_service`, `shared_router`).
 19. `schemas.PatternInfo.description` is always empty because `list_patterns` never populates it,
     yet the frontend has rendering paths for it.
+
+**Tooling**
+
+20. ✅ **A relocated venv silently runs the wrong interpreter and the wrong packages.** Console
+    scripts in `.venv/bin` (`uvicorn`, `pip`, `fastapi`, …) get an **absolute** interpreter path
+    baked into their shebang at install time. This repo was previously checked out at
+    `/home/cowboy/000/cve-osint-1`, and `.venv` was moved here with it — so all nine scripts still
+    began `#!/home/cowboy/000/cve-osint-1/.venv/bin/python3` and launched the *old* venv, whose
+    `site-packages` happened to satisfy the imports. Nothing failed visibly; the app simply ran
+    the previous checkout's dependency set, which also meant `pip install -r
+    backend/requirements.txt` had no effect. Shebangs repaired and `run.sh` now uses `python3 -m
+    uvicorn`, which cannot go stale. **The durable fix for any moved venv is to delete and
+    recreate it:**
+
+    ```bash
+    rm -rf .venv && python3 -m venv .venv && .venv/bin/pip install -r backend/requirements.txt
+    ```
+
+    This is worth doing for `cve-marina-all-1` if it and `cve-osint-1` are both still live — the
+    two venvs are independent copies and will drift.
 
 ---
 
