@@ -216,11 +216,15 @@ schema changes require manual DB work).
 > `job_manager.py`. Those same rows also lack `model`/cost keys, which is why
 > `find_existing_result` has the `stored is None` fallback.
 
-**Current DB contents** (`cve_osint.db`, ~9.5 MB): 166 jobs —
-118 youtube/completed, 14 youtube/failed, 15 rumble/completed, 14 rumble/failed, **3 rumble stuck
-in `running`**, 1 file/failed, 1 web/failed. Rows with `source` of `file` or `web` are historical
-only. Most-used patterns: `summarize` (64), `extract_wisdom` (27), `extract_insights` (26),
+**Current DB contents** (`cve_osint.db`, ~9.5 MB): 161 jobs, every one `completed` (133) or
+`failed` (28) — 118 youtube/completed, 14 youtube/failed, 15 rumble/completed, 14 rumble/failed.
+Most-used patterns: `summarize` (64), `extract_wisdom` (26), `extract_insights` (25),
 `youtube_summary` (18).
+
+> Cleaned 2026-09-28: the 3 rows stuck in `running` since 2026-09-16 and the 2 legacy `file`/`web`
+> rows were deleted. All five were inert — no transcript, result, or metadata — so nothing was
+> lost. A pre-cleanup copy is at `cve_osint-backup-20260928.db` (matched by the `*.db` ignore
+> rule).
 
 ---
 
@@ -448,8 +452,11 @@ Items marked ✅ were fixed on 2026-09-28.
 **Correctness / reliability**
 
 6. **`running` is a terminal state on restart.** Tasks are in-process `asyncio.Task`s; if uvicorn
-   reloads or crashes mid-analysis the row is never updated. The live DB already has **3 Rumble
-   jobs stuck in `running` since 2026-09-16** — a visible symptom, not a hypothetical.
+   reloads or crashes mid-analysis the row is never updated. This is not hypothetical — it
+   produced 3 Rumble jobs stuck in `running` from 2026-09-16, which had to be deleted by hand on
+   2026-09-28. The underlying flaw is unchanged: **every restart can orphan new rows.** Since
+   `--reload` is on by default, editing any backend file during a running analysis is enough to
+   trigger it.
 7. **No concurrency control.** Every request spawns an unbounded task; each Rumble job spawns its
    own `fabric` process (up to 600 s) plus ffmpeg. N parallel submissions = N LLM calls.
 8. **Broad exception handling hides causes.** Every orchestrator wraps metadata fetch in
@@ -467,7 +474,8 @@ Items marked ✅ were fixed on 2026-09-28.
 12. **`estimate_cost` undercounts input tokens** (transcript only, not the pattern prompt) and
     ignores transcription cost entirely.
 13. **No schema migrations.** `create_all` only creates; any column change needs manual SQLite work.
-    `file_path` and the `file`/`web` `source` values are now legacy columns/rows.
+    `file_path` is now a dead column — nothing writes it since the File feature was removed — but
+    it still exists in the schema, as does the `source` column's ability to hold `file`/`web`.
 14. **`App.css` and `assets/` are dead**, and `public/icons.svg` is unreferenced. `frontend/dist/`
     is gitignored and must be rebuilt after any UI change.
 15. **No tests and no CI** anywhere in the repo.
