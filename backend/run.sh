@@ -15,8 +15,9 @@ if [ ! -f "$PROJECT_DIR/frontend/dist/index.html" ]; then
   echo "No frontend build found — the API will run but nothing will be served at /."
   echo "Build it first:  cd frontend && npm install && npm run build"
 fi
-# HOST defaults to loopback: this app has no authentication, so it should not be
-# reachable from the network. Override with HOST=0.0.0.0 if you need LAN access.
+# HOST defaults to loopback. Requests now carry a bearer token, but registration
+# is honor-system and the traffic is plain HTTP, so keeping this off the network
+# by default is still the right call. Override with HOST=0.0.0.0 for LAN access.
 # Run from the project root, not backend/: `backend` is a package, so the repo root
 # must be the working directory for `backend.main` to be importable.
 # Invoke uvicorn as a module (`python3 -m uvicorn`) rather than the console script in
