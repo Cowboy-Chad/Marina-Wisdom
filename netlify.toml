@@ -1,0 +1,33 @@
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # Vite 8 requires Node 20.19+ or 22.12+. Pinned so the build does not depend on
+  # whatever default Netlify happens to be running.
+  NODE_VERSION = "22"
+
+# The browser only ever talks to the Netlify origin. /api/* is proxied to the
+# Render backend here, so the app makes same-origin requests: no CORS preflight
+# and no VITE_API_BASE to configure. If you would rather call the backend
+# directly instead, delete this block and set ALLOWED_ORIGINS on Render plus
+# VITE_API_BASE at build time.
+#
+# REPLACE the host below with your Render service URL. Until you do, every API
+# call from the deployed site fails: the requests are forwarded to a hostname
+# that does not exist.
+[[redirects]]
+  from = "/api/*"
+  to = "https://REPLACE-ME.onrender.com/api/:splat"
+  status = 200
+  force = true
+
+# SPA fallback. React Router handles /history and /analysis/rumble client-side,
+# so every unknown path must return index.html instead of a 404.
+# This rule must stay last: Netlify applies redirects in order, and existing
+# static files still win, so /assets/* is unaffected.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

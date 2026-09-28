@@ -6,24 +6,29 @@ from backend.schemas import JobStatusResponse
 from backend.services.fabric_service import DEFAULT_MODEL
 
 
+async def _job_to_response(job: AnalysisJob) -> JobStatusResponse:
+    return JobStatusResponse(
+        id=job.id,
+        source=job.source,
+        url=job.url,
+        pattern=job.pattern,
+        status=job.status,
+        transcript=job.transcript,
+        result=job.result,
+        error=job.error,
+        metadata_json=job.metadata_json,
+        username=job.username,
+        created_at=job.created_at,
+        updated_at=job.updated_at,
+    )
+
+
 async def get_job(job_id: str) -> Optional[JobStatusResponse]:
     async with async_session() as session:
         job = await session.get(AnalysisJob, job_id)
         if job is None:
             return None
-        return JobStatusResponse(
-            id=job.id,
-            source=job.source,
-            url=job.url,
-            pattern=job.pattern,
-            status=job.status,
-            transcript=job.transcript,
-            result=job.result,
-            error=job.error,
-            metadata_json=job.metadata_json,
-            created_at=job.created_at,
-            updated_at=job.updated_at,
-        )
+        return await _job_to_response(job)
 
 
 async def list_jobs(
@@ -42,38 +47,7 @@ async def list_jobs(
         stmt = stmt.order_by(desc(AnalysisJob.created_at)).offset(offset).limit(limit)
         result = await session.execute(stmt)
         jobs = result.scalars().all()
-        return [
-            JobStatusResponse(
-                id=j.id,
-                source=j.source,
-                url=j.url,
-                pattern=j.pattern,
-                status=j.status,
-                transcript=j.transcript,
-                result=j.result,
-                error=j.error,
-                metadata_json=j.metadata_json,
-                created_at=j.created_at,
-                updated_at=j.updated_at,
-            )
-            for j in jobs
-        ]
-
-
-async def _job_to_response(job: AnalysisJob) -> JobStatusResponse:
-    return JobStatusResponse(
-        id=job.id,
-        source=job.source,
-        url=job.url,
-        pattern=job.pattern,
-        status=job.status,
-        transcript=job.transcript,
-        result=job.result,
-        error=job.error,
-        metadata_json=job.metadata_json,
-        created_at=job.created_at,
-        updated_at=job.updated_at,
-    )
+        return [await _job_to_response(j) for j in jobs]
 
 
 async def find_existing_result(
@@ -142,7 +116,10 @@ async def find_existing_transcript(source: str, url: str) -> str | None:
             .where(AnalysisJob.source == source)
             .where(AnalysisJob.url == url)
             .where(AnalysisJob.transcript.isnot(None))
-            .where(AnalysisJob.status.in_(["completed"]))
+            # Deliberately not filtered on status. A transcript is saved as soon
+            # as transcription succeeds, before the (cheap) fabric step runs, so
+            # a row that later failed still holds a transcript we paid for.
+            # Requiring "completed" here would discard it and pay again.
             .order_by(AnalysisJob.created_at.desc())
             .limit(1)
         )
@@ -154,7 +131,11 @@ async def find_existing_transcript(source: str, url: str) -> str | None:
 
 
 async def create_job(
-    source: str, url: str | None, pattern: str, file_path: str | None = None
+    source: str,
+    url: str | None,
+    pattern: str,
+    file_path: str | None = None,
+    username: str | None = None,
 ) -> str:
     async with async_session() as session:
         job = AnalysisJob(
@@ -163,6 +144,7 @@ async def create_job(
             file_path=file_path,
             pattern=pattern,
             status="pending",
+            username=username,
         )
         session.add(job)
         await session.commit()

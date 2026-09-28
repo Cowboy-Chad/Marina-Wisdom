@@ -2,9 +2,9 @@ fastapi
 uvicorn
 sqlalchemy[asyncio]
 aiosqlite
+asyncpg
 pydantic
 httpx
 tiktoken
-youtube-transcript-api
 cloudscraper
 requests

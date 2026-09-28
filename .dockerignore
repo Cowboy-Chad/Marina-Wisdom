@@ -1,0 +1,26 @@
+# Never ship local state or secrets into an image.
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# The local SQLite database holds transcripts that were paid for, and the
+# deployment uses Postgres regardless.
+*.db
+*.db-journal
+
+frontend/node_modules/
+frontend/dist/
+
+.git/
+.gitignore
+.claude/
+.env
+*.env.local
+
+Dockerfile
+.dockerignore
+
+# Note: no "*.md" rule here on purpose. Every fabric pattern is a directory
+# containing a system.md, so excluding markdown would strip the patterns.

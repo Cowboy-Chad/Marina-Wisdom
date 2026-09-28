@@ -1,21 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getHistory } from '../api/client'
-import { Clock, MonitorPlay, Video, Copy, ExternalLink, ChevronDown, ChevronUp, Search, X } from 'lucide-react'
+import { Clock, Video, Copy, ExternalLink, ChevronDown, ChevronUp, Search, X } from 'lucide-react'
 import MetadataDisplay from '../components/MetadataDisplay'
 
 const SOURCE_ICONS = {
-  youtube: MonitorPlay,
   rumble: Video,
 }
 
 const SOURCE_COLORS = {
-  youtube: 'text-red-400',
   rumble: 'text-green-400',
 }
 
 export default function HistoryPage() {
   const [jobs, setJobs] = useState([])
-  const [source, setSource] = useState('')
   const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [expandedId, setExpandedId] = useState(null)
@@ -24,11 +21,11 @@ export default function HistoryPage() {
 
   useEffect(() => {
     setLoading(true)
-    getHistory(source ? { source } : {})
+    getHistory()
       .then(setJobs)
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [source])
+  }, [])
 
   useEffect(() => {
     if (!showMetaId) return
@@ -48,6 +45,7 @@ export default function HistoryPage() {
         job.pattern,
         job.source,
         job.status,
+        job.username,
         job.error,
         job.result,
         job.transcript,
@@ -72,22 +70,6 @@ export default function HistoryPage() {
   return (
     <div>
       <h1 className="text-2xl font-bold mb-6">History</h1>
-
-      <div className="flex gap-2 mb-6">
-        {['', 'youtube', 'rumble'].map((s) => (
-          <button
-            key={s}
-            onClick={() => setSource(s)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-              source === s
-                ? 'bg-violet-600 text-white'
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-            }`}
-          >
-            {s ? s.charAt(0).toUpperCase() + s.slice(1) : 'All'}
-          </button>
-        ))}
-      </div>
 
       <div className="relative mb-6">
         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
@@ -142,7 +124,8 @@ export default function HistoryPage() {
                     }`}>{job.status}</span>
                   </div>
                   <div className="text-xs text-gray-500 mt-0.5">
-                    Source: {job.source || '—'} · Pattern: {job.pattern} · {new Date(job.created_at).toLocaleString()}
+                    Source: {job.source || '—'} · Pattern: {job.pattern}
+                    {job.username ? ` · By: ${job.username}` : ''} · {new Date(job.created_at).toLocaleString()}
                   </div>
                 </div>
                 <div className="flex items-center gap-1">

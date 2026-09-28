@@ -1,19 +1,11 @@
-import os
-
 import httpx
 import tiktoken
 
+from backend.config import get_openrouter_api_key
 # Single source of truth for the app's default model lives in fabric_service.
 from backend.services.fabric_service import DEFAULT_MODEL as FABRIC_MODEL
 
-OPENROUTER_API_KEY = None
-_env_path = os.path.expanduser("~/.config/fabric/.env")
-if os.path.exists(_env_path):
-    with open(_env_path) as f:
-        for line in f:
-            line = line.strip()
-            if line.startswith("OPENROUTER_API_KEY="):
-                OPENROUTER_API_KEY = line.split("=", 1)[1].strip("\"'")
+OPENROUTER_API_KEY = get_openrouter_api_key()
 
 _pricing_cache: dict[str, dict] = {}
 _pricing_cache_timestamp: float = 0

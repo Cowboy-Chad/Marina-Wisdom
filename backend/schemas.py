@@ -3,16 +3,26 @@ from typing import Optional
 from datetime import datetime
 
 
-class YouTubeRequest(BaseModel):
-    url: str = ""
-    pattern: str
-    model: Optional[str] = None
-
-
 class RumbleRequest(BaseModel):
     url: str = ""
     pattern: str
     model: Optional[str] = None
+
+
+class RegisterRequest(BaseModel):
+    username: str
+    email: str
+
+
+class RegisterResponse(BaseModel):
+    token: str
+    username: str
+    email: str
+
+
+class UserResponse(BaseModel):
+    username: str
+    email: str
 
 
 class JobStatusResponse(BaseModel):
@@ -25,6 +35,7 @@ class JobStatusResponse(BaseModel):
     result: Optional[str] = None
     error: Optional[str] = None
     metadata_json: Optional[dict] = None
+    username: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
