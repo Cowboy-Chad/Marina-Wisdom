@@ -1,5 +1,5 @@
 import { Link, NavLink } from 'react-router-dom'
-import { Shield, Activity, History, MonitorPlay, Video, Globe, Upload } from 'lucide-react'
+import { Shield, History, MonitorPlay, Video } from 'lucide-react'
 
 const navLinkClass = ({ isActive }) =>
   `flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition ${
@@ -23,12 +23,6 @@ export default function Layout({ children }) {
             </NavLink>
             <NavLink to="/analysis/rumble" className={navLinkClass}>
               <Video size={16} /> Rumble
-            </NavLink>
-            <NavLink to="/analysis/web" className={navLinkClass}>
-              <Globe size={16} /> Web
-            </NavLink>
-            <NavLink to="/analysis/file" className={navLinkClass}>
-              <Upload size={16} /> File
             </NavLink>
             <NavLink to="/history" className={navLinkClass}>
               <History size={16} /> History

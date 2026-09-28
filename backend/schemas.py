@@ -15,12 +15,6 @@ class RumbleRequest(BaseModel):
     model: Optional[str] = None
 
 
-class WebRequest(BaseModel):
-    url: str = ""
-    pattern: str
-    model: Optional[str] = None
-
-
 class JobStatusResponse(BaseModel):
     id: str
     source: str

@@ -1,20 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getHistory } from '../api/client'
-import { Clock, MonitorPlay, Video, Globe, Upload, Copy, ExternalLink, ChevronDown, ChevronUp, Search, X } from 'lucide-react'
+import { Clock, MonitorPlay, Video, Copy, ExternalLink, ChevronDown, ChevronUp, Search, X } from 'lucide-react'
 import MetadataDisplay from '../components/MetadataDisplay'
 
 const SOURCE_ICONS = {
   youtube: MonitorPlay,
   rumble: Video,
-  file: Upload,
-  web: Globe,
 }
 
 const SOURCE_COLORS = {
   youtube: 'text-red-400',
   rumble: 'text-green-400',
-  file: 'text-blue-400',
-  web: 'text-purple-400',
 }
 
 export default function HistoryPage() {
@@ -78,7 +74,7 @@ export default function HistoryPage() {
       <h1 className="text-2xl font-bold mb-6">History</h1>
 
       <div className="flex gap-2 mb-6">
-        {['', 'youtube', 'rumble', 'file', 'web'].map((s) => (
+        {['', 'youtube', 'rumble'].map((s) => (
           <button
             key={s}
             onClick={() => setSource(s)}

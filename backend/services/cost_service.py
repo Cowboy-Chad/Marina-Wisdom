@@ -3,6 +3,9 @@ import os
 import httpx
 import tiktoken
 
+# Single source of truth for the app's default model lives in fabric_service.
+from backend.services.fabric_service import DEFAULT_MODEL as FABRIC_MODEL
+
 OPENROUTER_API_KEY = None
 _env_path = os.path.expanduser("~/.config/fabric/.env")
 if os.path.exists(_env_path):
@@ -11,9 +14,6 @@ if os.path.exists(_env_path):
             line = line.strip()
             if line.startswith("OPENROUTER_API_KEY="):
                 OPENROUTER_API_KEY = line.split("=", 1)[1].strip("\"'")
-
-# Default model from fabric config
-FABRIC_MODEL = os.environ.get("FABRIC_MODEL", "deepseek/deepseek-v4-flash")
 
 _pricing_cache: dict[str, dict] = {}
 _pricing_cache_timestamp: float = 0
