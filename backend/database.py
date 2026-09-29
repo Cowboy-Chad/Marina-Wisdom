@@ -112,6 +112,57 @@ _CONNECT_ATTEMPTS = 20
 _CONNECT_DELAY = 3.0
 
 
+# Datetime columns that were originally declared WITHOUT timezone. On Postgres
+# those are TIMESTAMP WITHOUT TIME ZONE, which asyncpg cannot encode an aware
+# datetime into, so every insert raised and registration returned 500. models.py
+# now declares them DateTime(timezone=True); this converts databases that were
+# already created, since create_all will not alter an existing table.
+_TIMEZONE_COLUMNS = [
+    ("users", "created_at"),
+    ("users", "last_seen_at"),
+    ("users", "rate_window_start"),
+    ("sessions", "created_at"),
+    ("analysis_jobs", "created_at"),
+    ("analysis_jobs", "updated_at"),
+]
+
+
+async def _apply_timezone_columns(conn) -> None:
+    """Widen naive datetime columns to TIMESTAMP WITH TIME ZONE.
+
+    Existing values were always written as UTC, so they are reinterpreted as UTC
+    rather than shifted by an offset — `USING col AT TIME ZONE 'UTC'` says "this
+    naive value was UTC", which is what it was.
+    """
+    if not is_postgres():
+        # SQLite has no distinct timestamp type — DateTime(timezone=True) is a
+        # no-op there — so there is nothing to convert.
+        return
+
+    from sqlalchemy import inspect
+
+    def _sync(sync_conn) -> None:
+        inspector = inspect(sync_conn)
+        tables = set(inspector.get_table_names())
+        for table, column in _TIMEZONE_COLUMNS:
+            if table not in tables:
+                continue
+            col = {c["name"]: c for c in inspector.get_columns(table)}.get(column)
+            if col is None:
+                continue
+            # Ask the reflected type, not its name: str(type) renders as
+            # "TIMESTAMP" and does not spell out the WITHOUT TIME ZONE part.
+            if getattr(col["type"], "timezone", False):
+                continue
+            sync_conn.exec_driver_sql(
+                f"ALTER TABLE {table} ALTER COLUMN {column} "
+                f"TYPE TIMESTAMP WITH TIME ZONE USING {column} AT TIME ZONE 'UTC'"
+            )
+            print(f"[db] converted {table}.{column} to TIMESTAMP WITH TIME ZONE")
+
+    await conn.run_sync(_sync)
+
+
 async def init_db(attempts: int = _CONNECT_ATTEMPTS, delay: float = _CONNECT_DELAY) -> None:
     """Create any missing tables, waiting for the database to accept connections.
 
@@ -136,6 +187,7 @@ async def init_db(attempts: int = _CONNECT_ATTEMPTS, delay: float = _CONNECT_DEL
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
                 await _apply_added_columns(conn)
+                await _apply_timezone_columns(conn)
             if attempt > 1:
                 print(f"[db] connected on attempt {attempt}")
             return

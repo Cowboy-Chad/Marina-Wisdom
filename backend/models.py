@@ -12,6 +12,19 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+# Every datetime column is declared timezone=True, which is not cosmetic.
+# Without it the column is TIMESTAMP WITHOUT TIME ZONE and asyncpg refuses to
+# store the aware datetimes this app produces: its encoder subtracts a naive
+# epoch (`delta = obj - pg_epoch_datetime` in asyncpg's datetime.pyx) and raises
+# "can't subtract offset-naive and offset-aware datetimes". That surfaced as a
+# 500 on registration against Postgres while working fine on SQLite, which
+# stores whatever it is handed. With timezone=True the column is TIMESTAMP WITH
+# TIME ZONE and the aware epoch is subtracted instead, which accepts them.
+#
+# The migration in database.py converts the columns on an existing database —
+# create_all will not alter a table that already exists.
+
+
 class User(Base):
     """A beta tester admitted through the honor-system registration form.
 
@@ -29,12 +42,12 @@ class User(Base):
     # SQLite and Postgres, unlike a functional index.
     username_lower = Column(String, nullable=False, unique=True, index=True)
     email = Column(String, nullable=False)
-    created_at = Column(DateTime, default=_utcnow)
-    last_seen_at = Column(DateTime, default=_utcnow)
+    created_at = Column(DateTime(timezone=True), default=_utcnow)
+    last_seen_at = Column(DateTime(timezone=True), default=_utcnow)
 
     # Fixed-window rate limit, kept on the row so it survives restarts and needs
     # no extra infrastructure.
-    rate_window_start = Column(DateTime, nullable=True)
+    rate_window_start = Column(DateTime(timezone=True), nullable=True)
     rate_window_count = Column(Integer, default=0, nullable=False)
 
 
@@ -45,7 +58,7 @@ class Session(Base):
 
     token_hash = Column(String, primary_key=True)
     user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
-    created_at = Column(DateTime, default=_utcnow)
+    created_at = Column(DateTime(timezone=True), default=_utcnow)
 
 
 class AnalysisJob(Base):
@@ -64,5 +77,5 @@ class AnalysisJob(Base):
     # Who asked for it. History stays shared/global; this is attribution only,
     # so a surprising bill can be traced back to a person.
     username = Column(String, nullable=True, index=True)
-    created_at = Column(DateTime, default=_utcnow)
-    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+    created_at = Column(DateTime(timezone=True), default=_utcnow)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
