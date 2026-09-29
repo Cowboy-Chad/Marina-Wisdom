@@ -28,8 +28,14 @@ RUN curl -fsSL -o /tmp/fabric.tar.gz \
 WORKDIR /app
 
 # Dependencies first: this layer only rebuilds when requirements.txt changes.
+#
+# yt-dlp is pinned here rather than in requirements.txt because it is installed
+# only here — the app shells out to the yt-dlp binary, and locally that comes
+# from the system rather than from pip. Unpinned it is replaced on every build,
+# and a Rumble extraction that works today can break without any change to this
+# repository. It is worth revisiting deliberately, not by accident.
 COPY backend/requirements.txt /app/backend/requirements.txt
-RUN pip install --no-cache-dir -r /app/backend/requirements.txt yt-dlp
+RUN pip install --no-cache-dir -r /app/backend/requirements.txt yt-dlp==2026.8.19
 
 # fabric loads patterns from ~/.config/fabric/patterns, and the app lists them at
 # runtime for the pattern picker. Vendored rather than downloaded at boot so a

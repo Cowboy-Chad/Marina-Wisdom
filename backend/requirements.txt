@@ -1,10 +1,22 @@
-fastapi
-uvicorn
-sqlalchemy[asyncio]
-aiosqlite
-asyncpg
-pydantic
-httpx
-tiktoken
-cloudscraper
-requests
+# Pinned exactly, to the versions installed in the deploy image that has been
+# verified working in production. Unpinned, the Render build resolved newer
+# libraries than the local venv (SQLAlchemy 2.1.1 against 2.0.52, starlette
+# 1.7.0 against 1.6.0), so the two environments were not the same program and a
+# local pass did not mean a deployed pass.
+#
+# When updating: change a pin, rebuild the image, and run it — the versions here
+# are the ones the deploy was tested against, not merely whatever pip preferred
+# that day.
+#
+# Direct dependencies only. Their transitive dependencies still float, so this
+# narrows the drift rather than eliminating it; a full lock would pin those too.
+fastapi==0.141.1
+uvicorn==0.54.0
+sqlalchemy[asyncio]==2.1.1
+aiosqlite==0.22.1
+asyncpg==0.31.0
+pydantic==2.13.5
+httpx==0.28.1
+tiktoken==0.14.0
+cloudscraper==1.2.71
+requests==2.34.2
