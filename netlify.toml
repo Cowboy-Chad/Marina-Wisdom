@@ -14,12 +14,12 @@
 # directly instead, delete this block and set ALLOWED_ORIGINS on Render plus
 # VITE_API_BASE at build time.
 #
-# REPLACE the host below with your Render service URL. Until you do, every API
-# call from the deployed site fails: the requests are forwarded to a hostname
-# that does not exist.
+# The host is the Render service named in render.yaml (cve-osint-api), in the
+# same region. If the service is ever renamed or recreated under a different
+# name, this must change with it.
 [[redirects]]
   from = "/api/*"
-  to = "https://REPLACE-ME.onrender.com/api/:splat"
+  to = "https://cve-osint-api.onrender.com/api/:splat"
   status = 200
   force = true
 
