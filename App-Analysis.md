@@ -58,7 +58,7 @@ proxy keeps them same-origin from the browser's point of view (see §9).
                 │                                   │
                 ▼                                   ▼
      fabric CLI (subprocess)                SQLite cve_osint.db  (local)
-                │                           On a Render disk    (deployed)
+                │                           Postgres            (deployed)
                 ▼                                   │
         OpenRouter API  ◀──────────────────────────┘  (audio transcription,
         (LLM inference)                                  direct HTTP)
@@ -84,11 +84,10 @@ relative `/api` and works identically in both modes.
   is registered *before* `CORSMiddleware` on purpose: Starlette makes the last-added middleware
   outermost, and CORS has to be outermost or a 401 reaches the browser without CORS headers and
   looks like an opaque CORS failure.
-- **The database backend is chosen at import time.** `DATABASE_URL` wins; otherwise SQLite at the
-  repo root. Deployed, that variable points at SQLite on the Render persistent disk, so the engine
-  is SQLite in both places. A Postgres URL still works — it is rewritten to `postgresql+asyncpg://`
-  and `sslmode` is translated to an `ssl` connect arg, since asyncpg rejects it as a query
-  parameter — but nothing in the current deploy uses one.
+- **The database backend is chosen at import time.** `DATABASE_URL` (Postgres, deployed) wins;
+  otherwise SQLite at the repo root. The URL is rewritten to `postgresql+asyncpg://` and `sslmode`
+  is translated to an `ssl` connect arg, since asyncpg rejects it as a query parameter. Only the
+  deployment uses Postgres — locally the app always runs on SQLite.
 - **All long work is fire-and-forget `asyncio.Task`s.** The POST handler creates a DB row, spawns a
   task, and returns a `job_id` immediately. There is no queue, no worker pool, no concurrency cap,
   and no persistence of the task registry — see §10.
@@ -131,8 +130,8 @@ All state is local `useState` + a `sessionStorage` hook.
 | FastAPI | 0.141.1 | Web framework |
 | uvicorn | 0.52.4 | ASGI server |
 | SQLAlchemy | 2.0.52 | ORM (async, `DeclarativeBase`) |
-| aiosqlite | 0.22.1 | Async SQLite driver — the driver in both places |
-| asyncpg | — | Async Postgres driver; unused by the current deploy |
+| aiosqlite | 0.22.1 | Async SQLite driver (local) |
+| asyncpg | — | Async Postgres driver (deployed) |
 | Pydantic | 2.13.5 | Request/response schemas |
 | httpx | 0.28.1 | Async HTTP (OpenRouter) |
 | tiktoken | 0.14.0 | Token counting for cost estimation |
@@ -186,7 +185,7 @@ The repo-root `.venv` above is the local development runtime. The **deployment i
 backend/
 ├── main.py                      # FastAPI app, auth middleware, CORS, routers, static mount
 ├── config.py                    # shared config (fabric .env path, OpenRouter key resolution)
-├── database.py                  # async engine/session; DATABASE_URL → disk path on Render, else SQLite
+├── database.py                  # async engine/session; DATABASE_URL → Postgres, else SQLite
 ├── models.py                    # User, Session, AnalysisJob ORM models
 ├── schemas.py                   # Pydantic request/response models
 ├── requirements.txt             # Python dependencies
@@ -560,13 +559,14 @@ exists only so local development works without exporting anything. Local CORS al
   depends on GitHub. It listens on `${PORT:-8000}` with `--reload` off.
 - **The frontend is deliberately not built into the image.** Netlify builds it and proxies `/api/*`,
   so shipping it too would mean committing build output — Render builds from the repo.
-- **`render.yaml`** — blueprint for a Docker web service plus a 1GB persistent disk mounted at
-  `/var/data`. Health check is `/api/health`, which must stay public (a health check pointed at an
-  authenticated route would 401 and Render would mark a healthy service down). `DATABASE_URL`
-  points at `/var/data/cve_osint.db`; `OPENROUTER_API_KEY` is a `sync: false` var set in the
-  dashboard. The disk is the whole reason this is safe — without it the database file is wiped on
-  every deploy and every account and every paid-for transcript goes with it. A disk requires a paid
-  instance type, so the plan is `starter` rather than `free`.
+- **`render.yaml`** — blueprint for a Docker web service plus a Postgres database. Health check is
+  `/api/health`, which must stay public (a health check pointed at an authenticated route would 401
+  and Render would mark a healthy service down). `DATABASE_URL` is injected from the database;
+  `OPENROUTER_API_KEY` is a `sync: false` var set in the dashboard. Both the service and the
+  database are pinned to `oregon`, because they talk over Render's private network and a
+  cross-region pair would add latency to every query. Plans are spelled `0.5c-512mb` and
+  `0.1c-256mb` — Render renamed instance types to compute plans in August 2026 and no longer
+  accepts `starter`.
 - **`netlify.toml`** — builds `frontend` with `NODE_VERSION = 22`, proxies `/api/*` to the Render
   host with `status = 200, force = true` (so the browser only ever talks to the Netlify origin and
   there is no CORS preflight), and finishes with the SPA fallback `/*` → `/index.html`, which must

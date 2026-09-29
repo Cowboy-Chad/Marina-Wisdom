@@ -121,7 +121,7 @@ All paths below except `/api/health` and `/api/auth/register` require a bearer t
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `DATABASE_URL` | SQLite in the repo root | Set to the disk path on Render |
+| `DATABASE_URL` | SQLite in the repo root | Postgres on Render; injected from `render.yaml` |
 | `OPENROUTER_API_KEY` | from `~/.config/fabric/.env` | Checked first, so Render needs no fabric config file |
 | `ALLOWED_ORIGINS` | localhost only | Comma-separated extra CORS origins |
 | `HOST` / `PORT` | `127.0.0.1` / `5173` | Bind address |
@@ -149,10 +149,25 @@ GitHub/GitLab before either can deploy.
 - **Netlify** builds `frontend/` (see `netlify.toml`) and proxies `/api/*` to
   Render, so the browser only ever makes same-origin requests.
 
-**Database.** SQLite, at `/var/data/cve_osint.db` on a 1GB Render disk. The disk
-is what makes this safe — without it the file is wiped on every deploy and you
-would lose every account and every transcript you had paid for. `DATABASE_URL`
-in `render.yaml` points at it.
+**Database.** Render Postgres, created by the `databases:` block in
+`render.yaml` and wired to the service through `DATABASE_URL`. Chosen for
+point-in-time recovery: it restores to any moment in the last 3 days, into a
+**new** instance you can inspect before repointing the app at it.
+
+Worth knowing, because it is the real difference: a SQLite file on a Render disk
+is also backed up — Render snapshots a disk every 24 hours, kept 7+ days — but
+Render's own docs say not to use a disk snapshot to recover a database, and it
+can only roll the *whole disk* back to the last snapshot. Postgres recovery is
+database-aware and goes to an exact moment.
+
+The trade is cost: Postgres is $6/month more than SQLite on a disk ($13.00
+versus $7.25 at the tiers configured here). Locally the app still uses SQLite;
+only the deployment uses Postgres.
+
+Two limitations to be aware of. The 3-day recovery window is set by the
+**workspace** plan, not the database — moving the workspace to Pro extends it to
+7 days going forward but does not widen history you already have. And you cannot
+recover to within the last 10 minutes of the present.
 
 **Three things to set before the first deploy:**
 
@@ -162,9 +177,11 @@ in `render.yaml` points at it.
 3. Set a hard spending cap on that OpenRouter key. This is the one control that
    holds if the URL is ever shared beyond the people you intended.
 
-If transcriptions get killed for memory, the Render instance is the cause —
-Starter is 512MB. The pipeline streams audio to disk rather than buffering it,
-so it may well fit, but Standard (2GB) is the fix if it does not.
+If transcriptions get killed for memory, the Render instance is the cause — the
+plan configured here is 512MB. The pipeline streams audio to `/tmp` rather than
+buffering it in memory, so it may well fit, but the next plan up (2GB) is the
+fix if it does not. Note that temporary audio lives in the container, not in the
+database, so it never touches the Postgres storage allowance.
 
 ## License
 

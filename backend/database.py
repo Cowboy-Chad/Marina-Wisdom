@@ -7,18 +7,18 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 def _database_url() -> tuple[str, dict]:
     """Resolve the database URL and any engine connect args.
 
-    SQLite is the database in both places: in the repo root locally, and at the
-    persistent-disk mount point on Render (DATABASE_URL is set there). This
-    serves a few hundred people, so a separate database service buys nothing.
-    A Postgres URL still works if anyone wants one — the same `create_all`
-    builds either schema.
+    Deployed, `DATABASE_URL` is set — Render injects a Postgres URL from the
+    database in render.yaml. Locally it is unset and the app falls back to a
+    SQLite file in the repo root, so there is nothing to configure to run it.
+    The same `create_all` builds either schema, which is what makes the two
+    interchangeable rather than two code paths.
 
-    The Postgres handling below exists because managed providers hand out
-    `postgres://` URLs carrying `?sslmode=require`. SQLAlchemy's async engine
-    needs the `postgresql+asyncpg://` scheme, and asyncpg does not understand
-    `sslmode` as a query parameter, so it is translated into an `ssl` connect
-    arg instead. Getting that wrong is an opaque startup failure, hence the
-    explicit translation.
+    The Postgres rewriting below exists because managed providers hand out
+    `postgres://` URLs, sometimes carrying `?sslmode=require`. SQLAlchemy's
+    async engine needs the `postgresql+asyncpg://` scheme, and asyncpg does not
+    understand `sslmode` as a query parameter, so it is translated into an `ssl`
+    connect arg instead. Getting that wrong is an opaque startup failure, hence
+    the explicit translation.
     """
     url = os.environ.get("DATABASE_URL")
     if not url:

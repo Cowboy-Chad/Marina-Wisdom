@@ -2,33 +2,50 @@
 # by hand. Committing this makes the deploy reproducible and records which
 # environment variables the service needs.
 #
-# The database is SQLite on a persistent disk, not Render Postgres: one less
-# service to pay for and one less moving part. The disk is what makes that safe
-# — without it the file is wiped on every deploy and you would lose every user
-# account and every transcript you had paid for.
+# The database is Render Postgres, chosen for point-in-time recovery: it restores
+# to any moment in the last few days, into a new instance that can be checked
+# before the app is repointed at it. A SQLite file on a persistent disk also gets
+# backed up (Render snapshots a disk every 24 hours), but Render's own docs say
+# not to use a disk snapshot to recover a database, and it can only roll the
+# whole disk back to the last snapshot. See the README for the cost comparison.
+
+databases:
+  - name: cve-osint-db
+    # 0.1 CPU / 256MB / 1GB storage. Plans were renamed in August 2026; "starter"
+    # and "basic" are no longer accepted values. The dataset is bounded by the
+    # channel lock (~403 videos, transcribed once each) so it stays small.
+    plan: 0.1c-256mb
+    databaseName: cve_osint
+    user: cve_osint
+    # Must match the service's region: they talk over Render's private network,
+    # and a cross-region pair would add latency to every query.
+    region: oregon
+    # Left at the default (allows external connections) so pg_dump works from
+    # outside. Set `ipAllowList: []` to allow private networking only, at the
+    # cost of that external access.
 
 services:
   - type: web
     name: cve-osint-api
     runtime: docker
     dockerfilePath: ./Dockerfile
-    # A persistent disk requires a paid instance type; Starter is the cheapest
-    # that supports one. Note Starter is 512MB — see the note in the README if
-    # transcriptions get killed for memory.
-    plan: starter
+    # 0.5 CPU / 512MB, which is the cheapest plan that does not spin down. The
+    # free plan sleeps after inactivity, and this app runs transcriptions as
+    # background tasks — a spin-down mid-job loses that job.
+    plan: 0.5c-512mb
+    region: oregon
     # /api/health is deliberately public — it is one of the few paths the auth
     # middleware lets through. A health check pointed at an authenticated route
     # would 401 and Render would mark a healthy service as down.
     healthCheckPath: /api/health
-    disk:
-      name: cve-osint-data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
-      # Four slashes: three for the scheme separator, then an absolute path.
-      # This is the file on the disk above, so it survives deploys.
+      # Injected from the database above. Render hands out a `postgresql://` URL
+      # for the private network; database.py rewrites it to the asyncpg scheme
+      # asyncpg expects.
       - key: DATABASE_URL
-        value: sqlite+aiosqlite:////var/data/cve_osint.db
+        fromDatabase:
+          name: cve-osint-db
+          property: connectionString
 
       # Set this in the Render dashboard. `sync: false` means Render prompts for
       # it and it is never stored in this file.

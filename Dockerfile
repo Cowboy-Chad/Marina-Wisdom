@@ -38,10 +38,9 @@ COPY fabric-patterns/ /root/.config/fabric/patterns/
 
 COPY backend/ /app/backend/
 
-# Where the SQLite database lives. On Render this is the persistent disk mount
-# point (see render.yaml), so the file survives redeploys. Created here so the
-# image also runs standalone.
-RUN mkdir -p /var/data
+# No database lives in this image. Deployed, DATABASE_URL points at Render
+# Postgres; locally, the app falls back to a SQLite file in the repo root. The
+# only thing written inside the container is temporary audio, under /tmp.
 
 # The frontend is deliberately not built or copied here. Netlify builds it and
 # proxies /api/* to this service, so the browser only ever talks to the Netlify

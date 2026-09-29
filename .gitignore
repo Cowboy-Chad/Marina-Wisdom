@@ -7,6 +7,12 @@ build/
 .venv/
 venv/
 *.db
+# SQLite write-ahead log and shared-memory files. These sit beside the .db file
+# while it is open and hold committed data that has not been checkpointed yet —
+# committing them would put binary database state in the repo.
+*.db-shm
+*.db-wal
+*.db-journal
 
 # Node
 node_modules/
