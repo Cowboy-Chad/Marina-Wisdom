@@ -1,51 +1,49 @@
 # Render blueprint. Optional — the same settings can be entered in the dashboard
-# by hand. Committing this makes the deployment reproducible and shows which
-# environment variables the service actually needs.
+# by hand. Committing this makes the deploy reproducible and records which
+# environment variables the service needs.
 #
-# Note there is no persistent disk here. The application database lives in
-# Postgres, and the only thing written to local disk is temporary audio during
-# transcription, which is fine to lose on restart.
+# The database is SQLite on a persistent disk, not Render Postgres: one less
+# service to pay for and one less moving part. The disk is what makes that safe
+# — without it the file is wiped on every deploy and you would lose every user
+# account and every transcript you had paid for.
 
 services:
   - type: web
     name: cve-osint-api
     runtime: docker
     dockerfilePath: ./Dockerfile
-    # The free instance type sleeps after inactivity and has no persistent disk.
-    # Transcription is CPU-bound (ffmpeg), so a paid instance is worth it here.
+    # A persistent disk requires a paid instance type; Starter is the cheapest
+    # that supports one. Note Starter is 512MB — see the note in the README if
+    # transcriptions get killed for memory.
     plan: starter
     # /api/health is deliberately public — it is one of the few paths the auth
     # middleware lets through. A health check pointed at an authenticated route
     # would 401 and Render would mark a healthy service as down.
     healthCheckPath: /api/health
+    disk:
+      name: cve-osint-data
+      mountPath: /var/data
+      sizeGB: 1
     envVars:
+      # Four slashes: three for the scheme separator, then an absolute path.
+      # This is the file on the disk above, so it survives deploys.
       - key: DATABASE_URL
-        fromDatabase:
-          name: cve-osint-db
-          property: connectionString
+        value: sqlite+aiosqlite:////var/data/cve_osint.db
 
       # Set this in the Render dashboard. `sync: false` means Render prompts for
-      # it and never stores it in this file.
+      # it and it is never stored in this file.
       - key: OPENROUTER_API_KEY
         sync: false
 
       # Only needed if the browser calls this API cross-origin. With the Netlify
-      # proxy in netlify.toml every request is same-origin, so this is unused —
-      # set it to the Netlify URL if you ever bypass the proxy.
+      # proxy in netlify.toml every request is same-origin, so this stays unset.
       # - key: ALLOWED_ORIGINS
       #   value: https://REPLACE-ME.netlify.app
 
-      # Per-user analysis allowance. The channel lock already bounds total spend
-      # (about 403 videos, transcribed once each and shared), so this is a
+      # Per-user allowance. The channel lock already bounds total spend (about
+      # 403 videos, transcribed once each and shared), so this is a
       # runaway-loop guard rather than a cost control.
       # - key: RATE_LIMIT_MAX_ANALYSES
       #   value: "30"
       # - key: RATE_LIMIT_WINDOW_SECONDS
       #   value: "3600"
-
-databases:
-  - name: cve-osint-db
-    # Confirm the current free-tier policy before relying on it: Render's free
-    # Postgres has historically been deleted after a set period, which would take
-    # the app's history with it.
-    plan: basic-256mb

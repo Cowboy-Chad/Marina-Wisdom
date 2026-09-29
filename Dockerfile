@@ -38,6 +38,11 @@ COPY fabric-patterns/ /root/.config/fabric/patterns/
 
 COPY backend/ /app/backend/
 
+# Where the SQLite database lives. On Render this is the persistent disk mount
+# point (see render.yaml), so the file survives redeploys. Created here so the
+# image also runs standalone.
+RUN mkdir -p /var/data
+
 # The frontend is deliberately not built or copied here. Netlify builds it and
 # proxies /api/* to this service, so the browser only ever talks to the Netlify
 # origin and no cross-origin request happens. Shipping it in the image as well

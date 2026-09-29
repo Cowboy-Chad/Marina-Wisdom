@@ -13,7 +13,7 @@ transcript is shared and reused, which is what keeps the running cost bounded.
 Browser ──▶ FastAPI ──▶ fabric CLI ──▶ OpenRouter API
                 │  │
                 │  └── yt-dlp / ffmpeg (audio) ──▶ OpenRouter (transcription)
-                └── Postgres (Render) or SQLite (local)
+                └── SQLite (repo root locally, Render disk when deployed)
 ```
 
 Deployed, the frontend is served by Netlify and the API by Render. Netlify
@@ -34,6 +34,11 @@ Locally the backend serves both the API and the built frontend on one origin
 - `yt-dlp`, `ffmpeg`, `ffprobe` on `PATH`
 
 ### Install
+
+`deploy/install-native.sh` does all of the below for you (ffmpeg/ffprobe, the
+venv, the fabric binary, the patterns and the frontend build). It is safe to
+re-run and skips whatever is already present, so it doubles as a check that your
+machine is set up correctly. To do it by hand instead:
 
 ```bash
 # from the repo root
@@ -114,7 +119,7 @@ All paths below except `/api/health` and `/api/auth/register` require a bearer t
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `DATABASE_URL` | SQLite in the repo root | Postgres URL in deployment |
+| `DATABASE_URL` | SQLite in the repo root | Set to the disk path on Render |
 | `OPENROUTER_API_KEY` | from `~/.config/fabric/.env` | Checked first, so Render needs no fabric config file |
 | `ALLOWED_ORIGINS` | localhost only | Comma-separated extra CORS origins |
 | `HOST` / `PORT` | `127.0.0.1` / `5173` | Bind address |
@@ -130,13 +135,31 @@ All paths below except `/api/health` and `/api/auth/register` require a bearer t
 `FABRIC_MODEL` environment variable. It is always passed to `fabric` explicitly, so Fabric's own
 `DEFAULT_MODEL` from `~/.config/fabric/.env` is ignored.
 
-## Deploying
+## Deploying (Netlify + Render)
 
-- **Render** runs the `Dockerfile` (see `render.yaml`). A container is required
-  rather than the native Python runtime because the app shells out to `fabric`,
-  `yt-dlp` and `ffmpeg`. The fabric binary is pinned by version **and** sha256.
-- **Netlify** builds `frontend/` (see `netlify.toml`) and proxies `/api/*` to Render.
+Both services build from a git repository, so the repo has to be pushed to
+GitHub/GitLab before either can deploy.
 
-**Before the first deploy**, replace `REPLACE-ME.onrender.com` in `netlify.toml`
-with the real Render service URL, and set `OPENROUTER_API_KEY` on Render. Until
-the hostname is replaced, every API call from the deployed site fails.
+- **Render** runs the `Dockerfile` (see `render.yaml`). The container carries
+  `ffmpeg`, `ffprobe`, `yt-dlp` and the `fabric` binary, none of which Render's
+  native Python runtime provides. The fabric binary is pinned by version **and**
+  sha256.
+- **Netlify** builds `frontend/` (see `netlify.toml`) and proxies `/api/*` to
+  Render, so the browser only ever makes same-origin requests.
+
+**Database.** SQLite, at `/var/data/cve_osint.db` on a 1GB Render disk. The disk
+is what makes this safe — without it the file is wiped on every deploy and you
+would lose every account and every transcript you had paid for. `DATABASE_URL`
+in `render.yaml` points at it.
+
+**Three things to set before the first deploy:**
+
+1. Replace `REPLACE-ME.onrender.com` in `netlify.toml` with the real Render
+   service URL. Until you do, every API call from the deployed site fails.
+2. Set `OPENROUTER_API_KEY` in the Render dashboard.
+3. Set a hard spending cap on that OpenRouter key. This is the one control that
+   holds if the URL is ever shared beyond the people you intended.
+
+If transcriptions get killed for memory, the Render instance is the cause —
+Starter is 512MB. The pipeline streams audio to disk rather than buffering it,
+so it may well fit, but Standard (2GB) is the fix if it does not.

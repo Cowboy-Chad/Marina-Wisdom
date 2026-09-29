@@ -23,4 +23,15 @@ fi
 # Invoke uvicorn as a module (`python3 -m uvicorn`) rather than the console script in
 # .venv/bin — those scripts hard-code an absolute interpreter path at install time and
 # break silently if the venv directory is ever moved or renamed.
-exec python3 -m uvicorn backend.main:app --host "${HOST:-127.0.0.1}" --port "${PORT:-5173}" --reload
+#
+# --reload is a development convenience (it watches the filesystem and restarts on
+# every edit). Turn it off with RELOAD=0 when the app is serving testers: a restart
+# mid-transcription loses that job, and the watcher is pure overhead when nobody is
+# editing the code.
+RELOAD_FLAG=""
+[ "${RELOAD:-1}" = "0" ] || RELOAD_FLAG="--reload"
+
+exec python3 -m uvicorn backend.main:app \
+  --host "${HOST:-127.0.0.1}" \
+  --port "${PORT:-5173}" \
+  $RELOAD_FLAG

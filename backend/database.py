@@ -7,14 +7,18 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 def _database_url() -> tuple[str, dict]:
     """Resolve the database URL and any engine connect args.
 
-    Deployment uses Postgres (Render injects DATABASE_URL); local development
-    falls back to SQLite in the repo root, so nothing has to be set up to run it.
+    SQLite is the database in both places: in the repo root locally, and at the
+    persistent-disk mount point on Render (DATABASE_URL is set there). This
+    serves a few hundred people, so a separate database service buys nothing.
+    A Postgres URL still works if anyone wants one — the same `create_all`
+    builds either schema.
 
-    Render hands out `postgres://` URLs carrying `?sslmode=require`. SQLAlchemy's
-    async engine needs the `postgresql+asyncpg://` scheme, and asyncpg does not
-    understand `sslmode` as a query parameter, so it is translated into an `ssl`
-    connect arg instead. Getting this wrong is an opaque connection failure at
-    startup, which is why it is done explicitly here.
+    The Postgres handling below exists because managed providers hand out
+    `postgres://` URLs carrying `?sslmode=require`. SQLAlchemy's async engine
+    needs the `postgresql+asyncpg://` scheme, and asyncpg does not understand
+    `sslmode` as a query parameter, so it is translated into an `ssl` connect
+    arg instead. Getting that wrong is an opaque startup failure, hence the
+    explicit translation.
     """
     url = os.environ.get("DATABASE_URL")
     if not url:
@@ -52,6 +56,29 @@ async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit
 
 def is_postgres() -> bool:
     return DATABASE_URL.startswith("postgresql+asyncpg://")
+
+
+if not is_postgres():
+    # SQLite's defaults assume one process at a time: readers block writers, and
+    # a writer that finds the database locked gives up immediately.
+    #
+    # This is hardening, not a fix for an observed failure. I could not make the
+    # default configuration fail — 200 concurrent writes and a deliberately slow
+    # write transaction overlapping six others all succeeded, because the writes
+    # this app performs last microseconds. It is still worth setting: WAL lets
+    # the read-heavy history queries run while a job is being written, and
+    # busy_timeout turns a rare collision into a short wait instead of an error
+    # the user would see as a failed analysis.
+    from sqlalchemy import event
+
+    @event.listens_for(engine.sync_engine, "connect")
+    def _sqlite_pragmas(dbapi_connection, _record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.execute("PRAGMA busy_timeout=15000")
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 
 # Columns added to analysis_jobs after the table was first created. create_all()
