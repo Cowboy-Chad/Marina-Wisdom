@@ -36,6 +36,17 @@ RUN pip install --no-cache-dir -r /app/backend/requirements.txt yt-dlp
 # restart never depends on GitHub being reachable.
 COPY fabric-patterns/ /root/.config/fabric/patterns/
 
+# fabric 1.4.473 exits 1 on every invocation when ~/.config/fabric/.env is
+# missing, including --listpatterns and --listmodels, which need no credentials:
+# it prints "error loading .env file" and stops. Without this file /api/patterns
+# and /api/models returned 500 and no analysis could run at all. The file only
+# has to exist — the API key arrives at runtime as OPENROUTER_API_KEY, which
+# fabric reads from the environment (verified: an invalid value is sent to
+# OpenRouter and rejected as 401, not reported as missing).
+#
+# Deliberately empty. No credential is ever baked into the image.
+RUN touch /root/.config/fabric/.env
+
 COPY backend/ /app/backend/
 
 # No database lives in this image. Deployed, DATABASE_URL points at Render
