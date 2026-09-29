@@ -1,3 +1,4 @@
+import asyncio
 import os
 from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 
@@ -107,11 +108,45 @@ async def _apply_added_columns(conn) -> None:
     await conn.run_sync(_sync)
 
 
-async def init_db():
+_CONNECT_ATTEMPTS = 20
+_CONNECT_DELAY = 3.0
+
+
+async def init_db(attempts: int = _CONNECT_ATTEMPTS, delay: float = _CONNECT_DELAY) -> None:
+    """Create any missing tables, waiting for the database to accept connections.
+
+    Deployed, Render provisions the web service and the database at the same
+    time, so this regularly runs before the database is listening. Without the
+    retry the app exits during startup and Render marks the deploy failed — which
+    is what happened on the first deploy, where the database came up seven
+    seconds after the service asked for it.
+
+    Retrying is safe because everything here is idempotent: create_all only
+    creates missing tables, and _apply_added_columns skips columns that already
+    exist. A failed attempt leaves nothing half-done that a later one would
+    trip over. Only connection failures are retried — a genuine schema error
+    still fails immediately rather than being buried under two minutes of
+    sleeping.
+    """
     from backend.models import Base
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        await _apply_added_columns(conn)
+    from sqlalchemy.exc import OperationalError
+
+    for attempt in range(1, attempts + 1):
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+                await _apply_added_columns(conn)
+            if attempt > 1:
+                print(f"[db] connected on attempt {attempt}")
+            return
+        except (OperationalError, OSError) as exc:
+            # OSError covers a refused connection or a DNS failure; OperationalError
+            # is what SQLAlchemy wraps most other connection problems in.
+            if attempt == attempts:
+                print(f"[db] still unreachable after {attempts} attempts, giving up")
+                raise
+            print(f"[db] not accepting connections yet (attempt {attempt}/{attempts}): {exc}")
+            await asyncio.sleep(delay)
 
 
 async def get_session() -> AsyncSession:
