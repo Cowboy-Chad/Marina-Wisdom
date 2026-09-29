@@ -2,7 +2,7 @@
 
 OSINT analysis app leveraging [Fabric](https://github.com/danielmiessler/fabric) AI patterns for automated analysis of multimedia content.
 
-Free software under the [GPL-3.0](LICENSE), by [Cowboy-Chad](https://github.com/Cowboy-Chad).
+Open source under the [MIT license](LICENSE), by [Cowboy-Chad](https://github.com/Cowboy-Chad).
 
 It analyzes videos from **one channel only** — Marina Jacobi's official Rumble
 channel, [rumble.com/c/MarinaJacobi](https://rumble.com/c/MarinaJacobi). There is
@@ -168,25 +168,23 @@ so it may well fit, but Standard (2GB) is the fix if it does not.
 
 ## License
 
-GPL-3.0 — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
 
-Copyright (C) 2026 Cowboy-Chad, the original developer.
+Copyright (c) 2026 Cowboy-Chad, the original developer.
 
-This program is free software: you can redistribute it and/or modify it under
-the terms of the GNU General Public License as published by the Free Software
-Foundation, either version 3 of the License, or (at your option) any later
-version.
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files, to deal in it without
+restriction, including the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies. The only condition is that the
+copyright notice and this permission notice are included in all copies or
+substantial portions of the software.
 
-This program is distributed in the hope that it will be useful, but **without
-any warranty**; without even the implied warranty of merchantability or fitness
-for a particular purpose. See the GNU General Public License for more details.
-
-Anyone who distributes this program or a modified version of it must pass on
-the same freedoms and must make the source available. That is the point of the
-share-alike term: this stays open.
+It comes with **no warranty** of any kind, express or implied, including
+merchantability or fitness for a particular purpose. In no event shall the
+author be liable for any claim, damages or other liability arising from the
+software or its use.
 
 **Third-party content.** `fabric-patterns/` is vendored from
 [danielmiessler/fabric](https://github.com/danielmiessler/fabric), which is MIT
-licensed. Those patterns remain under MIT and their copyright stays with their
-authors; everything else in this repository is GPL-3.0. The two are compatible
-— MIT permits inclusion in a GPL work.
+licensed. Those patterns remain the copyright of their authors; the MIT notice
+above covers the rest of this repository.
