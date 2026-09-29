@@ -2,6 +2,8 @@
 
 OSINT analysis app leveraging [Fabric](https://github.com/danielmiessler/fabric) AI patterns for automated analysis of multimedia content.
 
+Free software under the [GPL-3.0](LICENSE), by [Cowboy-Chad](https://github.com/Cowboy-Chad).
+
 It analyzes videos from **one channel only** — Marina Jacobi's official Rumble
 channel, [rumble.com/c/MarinaJacobi](https://rumble.com/c/MarinaJacobi). There is
 no open URL or channel search. Each distinct video is transcribed once and the
@@ -163,3 +165,28 @@ in `render.yaml` points at it.
 If transcriptions get killed for memory, the Render instance is the cause —
 Starter is 512MB. The pipeline streams audio to disk rather than buffering it,
 so it may well fit, but Standard (2GB) is the fix if it does not.
+
+## License
+
+GPL-3.0 — see [LICENSE](LICENSE).
+
+Copyright (C) 2026 Cowboy-Chad, the original developer.
+
+This program is free software: you can redistribute it and/or modify it under
+the terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+This program is distributed in the hope that it will be useful, but **without
+any warranty**; without even the implied warranty of merchantability or fitness
+for a particular purpose. See the GNU General Public License for more details.
+
+Anyone who distributes this program or a modified version of it must pass on
+the same freedoms and must make the source available. That is the point of the
+share-alike term: this stays open.
+
+**Third-party content.** `fabric-patterns/` is vendored from
+[danielmiessler/fabric](https://github.com/danielmiessler/fabric), which is MIT
+licensed. Those patterns remain under MIT and their copyright stays with their
+authors; everything else in this repository is GPL-3.0. The two are compatible
+— MIT permits inclusion in a GPL work.
